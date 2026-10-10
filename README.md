@@ -9,6 +9,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Customer (suki) list with balances, search by name or phone, add customers
+- Product list with prices: search, add, tap a product to edit its name or price
 
 ### Planned
 
@@ -56,7 +57,7 @@ To open it from a phone on the same Wi-Fi, use `./run.sh phone` (or `flask --app
 ```
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
-schema.sql         tables: settings, customers, transactions
+schema.sql         tables: settings, customers, transactions, products
 templates/         HTML pages (Bootstrap)
 static/js/         page scripts (fetch the API)
 instance/          database and secret key (private, not in git)
@@ -71,5 +72,8 @@ instance/          database and secret key (private, not in git)
 | GET | `/api/dashboard` | Summary numbers for the dashboard |
 | GET | `/api/customers` | All customers with their balances |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
+| GET | `/api/products` | All products |
+| POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000}` |
+| PUT | `/api/products/<id>` | Change a product's name or price (same body as POST) |
 
 Amounts are in centavos (`1250` = ₱12.50).
