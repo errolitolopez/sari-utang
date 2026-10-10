@@ -4,6 +4,7 @@ const customerId = Number(document.getElementById("customer-page").dataset.custo
 
 let products = []; // product list, loaded when the utang form opens
 let lines = []; // items in the utang being made: {productId, name, unit, price, quantity}
+let balance = 0; // what the customer owes now, in centavos
 
 const modalElement = document.getElementById("utang-modal");
 const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
@@ -57,9 +58,13 @@ function renderCustomer(customer) {
   document.title = `${customer.name} · Sari Utang`;
   document.getElementById("customer-name").textContent = customer.name;
   document.getElementById("customer-phone").textContent = customer.phone || "";
-  const balance = document.getElementById("customer-balance");
-  balance.textContent = formatAmount(customer.balance);
-  balance.className = `fs-3 fw-bold ${customer.balance > 0 ? "text-danger" : "text-success"}`;
+  const balanceText = document.getElementById("customer-balance");
+  balanceText.textContent = formatAmount(customer.balance);
+  balanceText.className = `fs-3 fw-bold ${customer.balance > 0 ? "text-danger" : "text-success"}`;
+
+  balance = customer.balance;
+  // Nothing to pay when there is no utang.
+  document.getElementById("add-payment-button").disabled = balance <= 0;
 }
 
 function historyItem(transaction) {
@@ -303,6 +308,92 @@ document.getElementById("utang-form").addEventListener("submit", async (event) =
     saveButton.disabled = false;
   }
 });
+
+// --- Payment form ------------------------------------------------------------
+
+const paymentModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("payment-modal"));
+const paymentAmount = document.getElementById("payment-amount");
+const paymentNote = document.getElementById("payment-note");
+const savePaymentButton = document.getElementById("save-payment-button");
+
+// Shows what will be left after this payment as you type.
+function renderRemaining() {
+  const amount = parsePrice(paymentAmount.value);
+  const remaining = document.getElementById("payment-remaining");
+  if (!amount) {
+    remaining.textContent = "—";
+    remaining.className = "fw-semibold";
+  } else if (amount > balance) {
+    remaining.textContent = "More than the utang";
+    remaining.className = "fw-semibold text-danger";
+  } else {
+    remaining.textContent = formatAmount(balance - amount);
+    remaining.className = `fw-semibold ${balance - amount === 0 ? "text-success" : ""}`;
+  }
+}
+
+function openPaymentForm() {
+  document.getElementById("payment-owed").textContent = formatAmount(balance);
+  paymentAmount.value = "";
+  paymentNote.value = "";
+  hideError("payment-error");
+  renderRemaining();
+  paymentModal.show();
+}
+
+document.getElementById("pay-full-button").addEventListener("click", () => {
+  paymentAmount.value = (balance / 100).toFixed(2);
+  renderRemaining();
+});
+
+document.getElementById("payment-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  hideError("payment-error");
+
+  const amount = parsePrice(paymentAmount.value);
+  if (!amount) {
+    showError("payment-error", "Enter an amount like 50 or 12.50.");
+    paymentAmount.focus();
+    return;
+  }
+  if (amount > balance) {
+    showError("payment-error", `That is more than the utang (${formatAmount(balance)}).`);
+    paymentAmount.focus();
+    return;
+  }
+
+  savePaymentButton.disabled = true;
+  try {
+    const response = await apiFetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "payment",
+        customer_id: customerId,
+        amount,
+        note: paymentNote.value.trim(),
+      }),
+    });
+    if (!response) return;
+    const data = await response.json();
+    if (!response.ok) {
+      showError("payment-error", data.error || "Could not save the payment.");
+      return;
+    }
+    paymentModal.hide();
+    await loadCustomer();
+  } catch {
+    showError("payment-error", "Cannot reach the server. Check your connection.");
+  } finally {
+    savePaymentButton.disabled = false;
+  }
+});
+
+document.getElementById("payment-modal").addEventListener("shown.bs.modal", () => paymentAmount.focus());
+paymentAmount.addEventListener("input", renderRemaining);
+document.getElementById("add-payment-button").addEventListener("click", openPaymentForm);
+
+// --- Start -------------------------------------------------------------------
 
 document.getElementById("add-utang-button").addEventListener("click", openUtangForm);
 document.getElementById("add-other-button").addEventListener("click", addOtherItem);

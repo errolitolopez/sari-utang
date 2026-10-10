@@ -458,28 +458,34 @@ def read_utang_item(raw, number):
 @app.post("/api/transactions")
 @login_required_api
 def api_add_transaction():
+    """Add an utang or a payment for a customer."""
     data = request.get_json(silent=True) or {}
 
-    if data.get("type") != "utang":
-        return jsonify(error="Only utang can be added for now."), 400
+    kind = data.get("type")
+    if kind not in ("utang", "payment"):
+        return jsonify(error='type must be "utang" or "payment".'), 400
 
     customer_id = data.get("customer_id")
-    if (
-        not isinstance(customer_id, int)
-        or isinstance(customer_id, bool)
-        or find_customer(customer_id) is None
-    ):
+    customer = None
+    if isinstance(customer_id, int) and not isinstance(customer_id, bool):
+        customer = find_customer(customer_id)
+    if customer is None:
         return jsonify(error="Customer not found."), 404
-
-    raw_items = data.get("items")
-    if not isinstance(raw_items, list) or not raw_items:
-        return jsonify(error="Add at least one item."), 400
-    if len(raw_items) > MAX_ITEMS:
-        return jsonify(error=f"Too many items (max {MAX_ITEMS})."), 400
 
     note = " ".join(str(data.get("note") or "").split())
     if len(note) > 200:
         return jsonify(error="Note is too long (max 200 characters)."), 400
+
+    if kind == "utang":
+        return add_utang(customer, data.get("items"), note)
+    return add_payment(customer, data.get("amount"), note)
+
+
+def add_utang(customer, raw_items, note):
+    if not isinstance(raw_items, list) or not raw_items:
+        return jsonify(error="Add at least one item."), 400
+    if len(raw_items) > MAX_ITEMS:
+        return jsonify(error=f"Too many items (max {MAX_ITEMS})."), 400
 
     # Check every item first, so nothing is saved if one of them is wrong.
     items = []
@@ -497,7 +503,7 @@ def api_add_transaction():
     conn = db.get_db()
     cursor = conn.execute(
         "INSERT INTO transactions (customer_id, type, amount, note) VALUES (?, 'utang', ?, ?)",
-        (customer_id, total, note or None),
+        (customer["id"], total, note or None),
     )
     transaction_id = cursor.lastrowid
     conn.executemany(
@@ -511,3 +517,24 @@ def api_add_transaction():
     conn.commit()  # the transaction and its items are saved together
 
     return jsonify(transaction={"id": transaction_id, "amount": total, "items": items}), 201
+
+
+def add_payment(customer, amount, note):
+    """A payment lowers the balance. It can be partial, but not more than what is owed."""
+    if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0:
+        return jsonify(error="Amount must be more than P0."), 400
+    if customer["balance"] <= 0:
+        return jsonify(error=f"{customer['name']} has no utang to pay."), 400
+    if amount > customer["balance"]:
+        owed = customer["balance"] / 100
+        return jsonify(error=f"That is more than the utang. {customer['name']} only owes P{owed:,.2f}."), 400
+
+    conn = db.get_db()
+    cursor = conn.execute(
+        "INSERT INTO transactions (customer_id, type, amount, note) VALUES (?, 'payment', ?, ?)",
+        (customer["id"], amount, note or None),
+    )
+    conn.commit()
+
+    balance = customer["balance"] - amount
+    return jsonify(transaction={"id": cursor.lastrowid, "amount": amount}, balance=balance), 201

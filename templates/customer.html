@@ -24,7 +24,14 @@
     </div>
   </div>
 
-  <button id="add-utang-button" class="btn btn-danger btn-lg w-100 mb-3">+ Utang</button>
+  <div class="row g-2 mb-3">
+    <div class="col-6">
+      <button id="add-utang-button" class="btn btn-danger btn-lg w-100">+ Utang</button>
+    </div>
+    <div class="col-6">
+      <button id="add-payment-button" class="btn btn-success btn-lg w-100" disabled>Bayad</button>
+    </div>
+  </div>
 
   <div class="card">
     <div class="card-header fw-semibold">History</div>
@@ -83,6 +90,48 @@
           <div id="utang-total" class="fs-4 fw-bold">₱0.00</div>
         </div>
         <button id="save-utang-button" type="submit" class="btn btn-danger btn-lg">Save utang</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Payment form -->
+<div class="modal fade" id="payment-modal" tabindex="-1" aria-labelledby="payment-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="payment-form" class="modal-content" novalidate>
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="payment-modal-title">Bayad</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex justify-content-between mb-3">
+          <span class="text-body-secondary">Utang</span>
+          <span id="payment-owed" class="fw-semibold text-danger"></span>
+        </div>
+
+        <label for="payment-amount" class="form-label">Amount paid</label>
+        <div class="input-group mb-2">
+          <span class="input-group-text">₱</span>
+          <input id="payment-amount" class="form-control form-control-lg" inputmode="decimal"
+                 placeholder="0.00" autocomplete="off">
+        </div>
+        <button id="pay-full-button" type="button" class="btn btn-outline-success btn-sm mb-3">
+          Bayad lahat
+        </button>
+
+        <div class="d-flex justify-content-between mb-3">
+          <span class="text-body-secondary">Matitira</span>
+          <span id="payment-remaining" class="fw-semibold"></span>
+        </div>
+
+        <label for="payment-note" class="form-label">Note <span class="text-body-secondary">(optional)</span></label>
+        <input id="payment-note" class="form-control mb-3" maxlength="200" autocomplete="off">
+
+        <div id="payment-error" class="alert alert-danger py-2 mb-0 d-none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="save-payment-button" type="submit" class="btn btn-success">Save bayad</button>
       </div>
     </form>
   </div>
