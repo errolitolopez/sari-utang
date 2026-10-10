@@ -12,7 +12,8 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products, set quantities with − / + buttons or type them (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, optional note. Paying more than the utang counts as paid in full and shows the sukli (change)
-- Invoice per customer: only the unpaid utang (items, qty × price). Payments pay off the oldest utang first: fully paid utang are left out, a partly paid one shows "bayad na" and what's left. Optional summary by product, total, balance. Print / save as PDF, copy as text for Messenger/Viber, or send by SMS
+- Invoice per customer: only the unpaid utang (items, qty × price). Payments pay off the oldest utang first: fully paid utang are left out, a partly paid one shows "bayad na" and what's left. Optional summary by product, total, balance. Download as PDF (A6 receipt), print, copy as text, or send by SMS Print / save as PDF, copy as text for Messenger/Viber, or send by SMS
+- Batch export: on the Singilin page, download a ZIP with one PDF invoice per customer (file name = customer name, e.g. `Aling Nena.pdf`), following the selected filter
 - Singilin list: everyone who owes, longest-waiting first, with filters (7+, 15+, 30+ days). "Matagal" (default 30 days) is set in [config/settings.json](#settings-configsettingsjson) and shown on the Dashboard
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
 - Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
@@ -103,6 +104,8 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
 seed.py            sample products, customers, utang and payments (flask --app app seed)
+invoice_pdf.py     invoice PDFs (fpdf2), A6 receipt layout
+fonts/             DejaVu Sans font for PDFs (has the ₱ sign), with its license
 schema.sql         tables: settings, customers, transactions, transaction_items, products
 config/units.json  units for products (editable)
 config/settings.json  settings like overdue_days (editable)
@@ -118,6 +121,8 @@ instance/          database and secret key (private, not in git)
 | POST | `/api/login` | Log in with `{"pin": "1234"}` |
 | POST | `/api/logout` | Log out |
 | GET | `/api/dashboard` | Summary numbers for the dashboard (includes `overdue_count`) |
+| GET | `/customers/<id>/invoice.pdf` | One customer's invoice as PDF |
+| GET | `/singilin/invoices.zip?min_days=30` | ZIP of PDF invoices, one per customer with utang (optional `min_days` filter) |
 | GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
 | GET | `/api/customers` | All customers with their balances |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
