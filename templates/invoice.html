@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice · {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="d-print-none">{% include "_navbar.html" %}</div>
+
+<main class="container py-3" style="max-width: 720px;">
+  <!-- Buttons (hidden when printing) -->
+  <div class="d-print-none mb-3">
+    <a href="{{ url_for('customer_page', customer_id=customer.id) }}" class="btn btn-link px-0 mb-2">← {{ customer.name }}</a>
+    <div class="d-flex flex-wrap gap-2">
+      <button id="print-button" type="button" class="btn btn-primary">Print / Save PDF</button>
+      <button id="copy-button" type="button" class="btn btn-outline-primary">Copy as text</button>
+      {% if sms_link %}
+      <a href="{{ sms_link }}" class="btn btn-outline-primary">Send via SMS</a>
+      {% endif %}
+    </div>
+    <div id="copy-message" class="small text-success mt-1 d-none">Copied! Paste it in Messenger or Viber.</div>
+    <!-- Fallback if copying is not allowed: the text is shown here to copy by hand -->
+    <textarea id="invoice-text" class="form-control mt-2 d-none" rows="8" readonly>{{ text }}</textarea>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h1 class="h4 mb-0">{{ store_name }}</h1>
+          <div class="text-body-secondary small">Listahan ng utang</div>
+        </div>
+        <div class="text-end small">
+          <div class="text-body-secondary">As of</div>
+          <div class="fw-semibold">{{ today }}</div>
+        </div>
+      </div>
+      <div class="mb-3">
+        <div class="small text-body-secondary">Customer</div>
+        <div class="fw-semibold">{{ customer.name }}</div>
+        {% if customer.phone %}<div class="small">{{ customer.phone }}</div>{% endif %}
+      </div>
+
+      {% if not invoice.entries %}
+      <div class="alert alert-success mb-0">Walang utang. Bayad na lahat. 🎉</div>
+      {% else %}
+
+      <!-- Every utang and payment, oldest first -->
+      <table class="table table-sm align-middle mb-3">
+        <thead>
+          <tr>
+            <th scope="col">Item</th>
+            <th scope="col" class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in invoice.entries %}
+          <tr class="table-light">
+            <td class="small fw-semibold" colspan="2">
+              {{ entry.date[:10] }} · {{ "Utang" if entry.type == "utang" else "Bayad" }}
+              {% if entry.note %}<span class="text-body-secondary fw-normal fst-italic">· {{ entry.note }}</span>{% endif %}
+            </td>
+          </tr>
+          {% if entry.type == "utang" %}
+            {% for item in entry["items"] %}
+            <tr>
+              <td>
+                {{ item.name }}
+                <div class="small text-body-secondary">
+                  {{ item.quantity|qty }}{% if item.unit %} {{ item.unit }}{% endif %} × {{ item.price|peso }}
+                </div>
+              </td>
+              <td class="text-end">{{ item.amount|peso }}</td>
+            </tr>
+            {% endfor %}
+            {% if entry["items"]|length != 1 %}
+            <tr>
+              <td class="text-end small text-body-secondary">Subtotal</td>
+              <td class="text-end fw-semibold">{{ entry.amount|peso }}</td>
+            </tr>
+            {% endif %}
+          {% else %}
+            <tr>
+              <td>
+                Bayad
+                {% if entry.tendered %}
+                <div class="small text-body-secondary">
+                  Natanggap {{ entry.tendered|peso }} · Sukli {{ (entry.tendered - entry.amount)|peso }}
+                </div>
+                {% endif %}
+              </td>
+              <td class="text-end text-success">−{{ entry.amount|peso }}</td>
+            </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Total per product -->
+      {% if invoice.products %}
+      <h2 class="h6">Summary by product</h2>
+      <table class="table table-sm mb-3">
+        <tbody>
+          {% for product in invoice.products %}
+          <tr>
+            <td>{{ product.name }}</td>
+            <td class="text-body-secondary">{{ product.quantity|qty }} {{ product.unit or "×" }}</td>
+            <td class="text-end">{{ product.amount|peso }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      <!-- Totals -->
+      <table class="table table-sm table-borderless mb-0 ms-auto" style="max-width: 320px;">
+        <tbody>
+          <tr>
+            <td>Total utang</td>
+            <td class="text-end">{{ invoice.total_utang|peso }}</td>
+          </tr>
+          <tr>
+            <td>Bayad</td>
+            <td class="text-end text-success">−{{ invoice.total_paid|peso }}</td>
+          </tr>
+          <tr class="border-top fs-5 fw-bold">
+            <td>Balance</td>
+            <td class="text-end text-danger">{{ invoice.balance|peso }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/invoice.js') }}"></script>
+{% endblock %}

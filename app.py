@@ -10,6 +10,7 @@ import secrets
 import time
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from urllib.parse import quote
 from functools import wraps
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
@@ -177,12 +178,16 @@ def load_settings():
     """Read config/settings.json. Read every time, so edits show up on the next refresh.
 
     overdue_days: an utang unpaid for this many days or more counts as "matagal".
+    store_name:   shown at the top of invoices (optional).
     """
     with open(SETTINGS_FILE, encoding="utf8") as f:
         settings = json.load(f)
     days = settings.get("overdue_days") if isinstance(settings, dict) else None
     if not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= 365:
         raise ValueError(f'{SETTINGS_FILE} must look like {{"overdue_days": 30}} (1 to 365)')
+    store_name = settings.setdefault("store_name", "Sari-Sari Store")
+    if not isinstance(store_name, str) or not 0 < len(store_name.strip()) <= 60:
+        raise ValueError(f'{SETTINGS_FILE}: "store_name" must be text, 1 to 60 characters')
     return settings
 
 
@@ -700,3 +705,126 @@ def api_void_transaction(transaction_id):
 
     change = -transaction["amount"] if transaction["type"] == "utang" else transaction["amount"]
     return jsonify(ok=True, balance=customer["balance"] + change)
+
+
+# --- Invoice -----------------------------------------------------------------
+
+@app.template_filter("peso")
+def peso_filter(centavos):
+    """1250 -> "₱12.50" (used in templates as {{ amount|peso }})"""
+    return f"₱{centavos / 100:,.2f}"
+
+
+@app.template_filter("qty")
+def quantity_filter(quantity):
+    """2.0 -> "2", 0.5 -> "0.5" (used in templates as {{ item.quantity|qty }})"""
+    return f"{Decimal(str(quantity)).normalize():f}"
+
+
+def describe_item(item):
+    """"2 bottle Coke Mismo", or "3 × Yelo" for typed-in items (no unit)."""
+    quantity = quantity_filter(item["quantity"])
+    return f"{quantity} {item['unit']} {item['name']}" if item["unit"] else f"{quantity} × {item['name']}"
+
+
+def invoice_data(customer_id):
+    """Everything since the customer last owed nothing.
+
+    When the balance reaches P0, the old entries are settled, so the invoice
+    starts again from the next utang. Voided entries are left out.
+    """
+    conn = db.get_db()
+    rows = conn.execute(
+        """
+        SELECT id, type, amount, note, date, tendered FROM transactions
+        WHERE customer_id = ? AND voided_at IS NULL
+        ORDER BY date, id
+        """,
+        (customer_id,),
+    ).fetchall()
+
+    balance = 0
+    start = 0  # index of the first entry after the balance was last P0
+    for index, row in enumerate(rows):
+        balance += row["amount"] if row["type"] == "utang" else -row["amount"]
+        if balance <= 0:
+            start = index + 1
+    entries = [dict(row, items=[]) for row in rows[start:]]
+
+    by_id = {e["id"]: e for e in entries}
+    if by_id:
+        placeholders = ",".join("?" * len(by_id))
+        for item in conn.execute(
+            f"SELECT transaction_id, name, unit, price, quantity, amount FROM transaction_items "
+            f"WHERE transaction_id IN ({placeholders}) ORDER BY id",
+            list(by_id),
+        ):
+            by_id[item["transaction_id"]]["items"].append(dict(item))
+
+    # Total quantity and amount per product (same name + unit), e.g. 6 bottle Coke Mismo.
+    products = {}
+    for entry in entries:
+        for item in entry["items"]:
+            key = (item["name"], item["unit"])
+            total = products.setdefault(
+                key, {"name": item["name"], "unit": item["unit"], "quantity": Decimal("0"), "amount": 0}
+            )
+            total["quantity"] += Decimal(str(item["quantity"]))
+            total["amount"] += item["amount"]
+    product_totals = sorted(products.values(), key=lambda p: -p["amount"])
+
+    total_utang = sum(e["amount"] for e in entries if e["type"] == "utang")
+    total_paid = sum(e["amount"] for e in entries if e["type"] == "payment")
+    return {
+        "entries": entries,
+        "products": product_totals,
+        "total_utang": total_utang,
+        "total_paid": total_paid,
+        "balance": total_utang - total_paid,
+    }
+
+
+def invoice_text(store_name, customer, invoice, today):
+    """Plain-text version for copying into Messenger/Viber or sending by SMS."""
+    lines = [store_name, f"Utang ni {customer['name']} (as of {today})", ""]
+    if not invoice["entries"]:
+        return "\n".join(lines + ["Walang utang. Bayad na lahat."])
+    for entry in invoice["entries"]:
+        day = entry["date"][:10]
+        if entry["type"] == "utang":
+            items = ", ".join(describe_item(i) for i in entry["items"]) or "Utang"
+            lines.append(f"{day}  {items}: {peso_filter(entry['amount'])}")
+        else:
+            lines.append(f"{day}  Bayad: -{peso_filter(entry['amount'])}")
+    lines += ["", f"Total utang: {peso_filter(invoice['total_utang'])}"]
+    if invoice["total_paid"]:
+        lines.append(f"Bayad: -{peso_filter(invoice['total_paid'])}")
+    lines.append(f"Balance: {peso_filter(invoice['balance'])}")
+    return "\n".join(lines)
+
+
+@app.get("/customers/<int:customer_id>/invoice")
+@login_required_page
+def invoice_page(customer_id):
+    customer = find_customer(customer_id)
+    if customer is None:
+        abort(404)
+    store_name = load_settings()["store_name"]
+    invoice = invoice_data(customer_id)
+    today = date.today().isoformat()
+    text = invoice_text(store_name, customer, invoice, today)
+
+    sms_link = None
+    if customer["phone"]:
+        phone = re.sub(r"[^0-9+]", "", customer["phone"])
+        sms_link = f"sms:{phone}?body={quote(text)}"
+
+    return render_template(
+        "invoice.html",
+        store_name=store_name,
+        customer=customer,
+        invoice=invoice,
+        today=today,
+        text=text,
+        sms_link=sms_link,
+    )
