@@ -96,8 +96,11 @@ Hindi nagagalaw ang listahan ng utang (`instance\`) at `backups\`.
 
 Hindi mag-a-update (at tuloy lang ang lumang version) kung:
 - **walang internet** — susubukan ulit sa susunod;
-- **may binagong file sa folder** na binago rin sa bagong version (hal. `config\settings.json`).
-  Makikita ito sa `logs\sari-utang.log`. Para ayusin: `git checkout config\settings.json`, tapos ilagay ulit ang pangalan ng tindahan.
+- **may binagong file ng app mismo** (hal. `app.py`) na binago rin sa bagong version.
+  Makikita ito sa `logs\sari-utang.log`. Para ayusin: `git checkout .` sa folder ng app.
+
+> Ligtas baguhin ang `config\settings.json` at `config\units.json`: kopya ito ng tindahan
+> (ginagawa sa unang takbo mula sa `*.example.json`), kaya hindi nito napipigilan ang update.
 
 Para patayin ang auto-update: sa `config\settings.json`, gawing `"auto_update": false`.
 Para mag-update nang manual: `git pull`, tapos **Stop Sari Utang** → **Sari Utang**.

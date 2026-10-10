@@ -76,6 +76,8 @@ To open it from a phone on the same Wi-Fi, use `./run.sh phone` (or `flask --app
 
 ## Configuration
 
+`config/settings.json` and `config/units.json` are each store's own files and are **not in git**. On first start they are copied from `config/settings.example.json` and `config/units.example.json`, so editing them never blocks an update (`git pull`). Settings missing from `settings.json` (e.g. added in a newer version) use the value from the example file.
+
 ### Units (`config/units.json`)
 
 The units in the product form's **Per** dropdown. Edit the file and refresh the page, no restart needed.
@@ -122,8 +124,8 @@ seed.py            sample products, customers, utang and payments (flask --app a
 invoice_pdf.py     invoice PDFs (fpdf2), A6 receipt layout
 fonts/             DejaVu Sans font for PDFs (has the ₱ sign), with its license
 schema.sql         tables: settings, customers, transactions, transaction_items, products
-config/units.json  units for products (editable)
-config/settings.json  settings like overdue_days (editable)
+config/*.example.json  default settings and units (in git)
+config/settings.json, units.json  this store's own copies (made on first start, not in git, editable)
 templates/         HTML pages (Bootstrap)
 static/js/         page scripts (fetch the API)
 instance/          database and secret key (private, not in git)
