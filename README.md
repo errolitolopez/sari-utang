@@ -9,7 +9,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Customer (suki) list with balances, search by name or phone, add customers
-- Product list with price per unit (pc, pack, sachet, bottle, can, kg, g, L, ml, oz): search, add, tap to edit
+- Product list with price per unit (pc, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit
 
 ### Planned
 
@@ -52,12 +52,32 @@ Open http://127.0.0.1:5000 and log in with your PIN.
 
 To open it from a phone on the same Wi-Fi, use `./run.sh phone` (or `flask --app app run --host 0.0.0.0`, never with `--debug`) and visit `http://<your-computer-ip>:5000`.
 
+## Configuration
+
+### Units (`config/units.json`)
+
+The units in the product form's **Per** dropdown. Edit the file and refresh the page, no restart needed.
+
+```json
+{
+  "pc": "pc (piraso)",
+  "kg": "kg (kilo)",
+  "tali": "tali (bundle)"
+}
+```
+
+- The **key** (`"kg"`) is what gets saved with each product and shown in the list (`₱65.00 / kg`).
+- The **text** (`"kg (kilo)"`) is only what the dropdown shows. It can be changed anytime.
+- The **first** unit is the default for new products.
+- Removing a unit is safe: products that use it keep it, and can still be edited.
+
 ## Project structure
 
 ```
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
 schema.sql         tables: settings, customers, transactions, products
+config/units.json  units for products (editable)
 templates/         HTML pages (Bootstrap)
 static/js/         page scripts (fetch the API)
 instance/          database and secret key (private, not in git)
