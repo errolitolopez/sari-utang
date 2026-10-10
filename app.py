@@ -283,11 +283,17 @@ def read_product_form(current_unit=None):
     return {"name": name, "price": price, "unit": unit}, None
 
 
-def product_name_taken(name, except_id=None):
+def product_taken(name, unit, except_id=None):
+    """True if another product already has this name AND unit.
+
+    The same name with a different unit is allowed, e.g. Coke Mismo per pc and per box.
+    except_id: when editing, the product being edited doesn't count as "another".
+    """
     row = db.get_db().execute(
-        "SELECT id FROM products WHERE name = ? COLLATE NOCASE", (name,)
+        "SELECT 1 FROM products WHERE name = ? COLLATE NOCASE AND unit = ? AND id != ?",
+        (name, unit, except_id or 0),
     ).fetchone()
-    return row is not None and row["id"] != except_id
+    return row is not None
 
 
 @app.get("/products")
@@ -300,7 +306,7 @@ def products_page():
 @login_required_api
 def api_list_products():
     rows = db.get_db().execute(
-        "SELECT id, name, price, unit FROM products ORDER BY name COLLATE NOCASE"
+        "SELECT id, name, price, unit FROM products ORDER BY name COLLATE NOCASE, price"
     ).fetchall()
     return jsonify(products=[dict(row) for row in rows])
 
@@ -311,8 +317,8 @@ def api_add_product():
     product, error = read_product_form()
     if error:
         return jsonify(error=error), 400
-    if product_name_taken(product["name"]):
-        return jsonify(error=f"{product['name']} is already in the list."), 409
+    if product_taken(product["name"], product["unit"]):
+        return jsonify(error=f"{product['name']} per {product['unit']} is already in the list."), 409
 
     conn = db.get_db()
     cursor = conn.execute(
@@ -333,8 +339,8 @@ def api_update_product(product_id):
     product, error = read_product_form(current_unit=saved["unit"])
     if error:
         return jsonify(error=error), 400
-    if product_name_taken(product["name"], except_id=product_id):
-        return jsonify(error=f"{product['name']} is already in the list."), 409
+    if product_taken(product["name"], product["unit"], except_id=product_id):
+        return jsonify(error=f"{product['name']} per {product['unit']} is already in the list."), 409
 
     conn.execute(
         "UPDATE products SET name = :name, price = :price, unit = :unit WHERE id = :id",
