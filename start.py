@@ -13,6 +13,9 @@ Every start:
   4. Starts the app with Waitress, a server made for daily use
      (flask run is only for development), reachable from phones on the same Wi-Fi.
 If the app is already running, it isn't started twice (with --open the browser still opens).
+
+Auto-update (see updater.py): before starting, and every few hours while running, the newest
+version is pulled from GitHub; if there was one, the app restarts itself with the new code.
 """
 
 import argparse
@@ -22,23 +25,29 @@ import os
 import signal
 import socket
 import sqlite3
+import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from datetime import datetime
 
-from waitress import serve
+import updater
 
-import db
-from app import app
+# app.py and db.py are imported inside main(), after the auto-update,
+# so a freshly pulled version is the one that runs.
 
 PORT = 5000
 KEEP_BACKUPS = 30
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKUP_DIR = os.path.join(APP_DIR, "backups")
 LOG_FILE = os.path.join(APP_DIR, "logs", "sari-utang.log")
-PID_FILE = os.path.join(app.instance_path, "server.pid")  # which process to stop
+INSTANCE_DIR = os.path.join(APP_DIR, "instance")  # the database, secret key, PIN
+PID_FILE = os.path.join(INSTANCE_DIR, "server.pid")  # which process to stop
 LOCAL_URL = f"http://127.0.0.1:{PORT}"
+UPDATE_CHECK_HOURS = 6
+RESTART_EXIT_CODE = 3  # tells run.bat to start the app again (after an update)
+RESTARTED = "SARI_UTANG_RESTARTED"  # set when the app restarted itself after an update
 
 
 def notify(message):
@@ -69,6 +78,8 @@ def log_to_file():
 
 def ask_for_pin():
     """Ask until a valid PIN is typed. Empty means 0000."""
+    import db
+
     while True:
         pin = getpass.getpass("No PIN set yet. Enter a 4 to 6 digit PIN (press Enter for 0000): ").strip()
         if not pin:
@@ -82,13 +93,13 @@ def ask_for_pin():
             print("The PIN must be 4 to 6 digits.")
 
 
-def backup_database():
+def backup_database(database):
     """Copy the database to backups/sari_utang-YYYY-MM-DD_HHMMSS.db and keep the last 30."""
     os.makedirs(BACKUP_DIR, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     target = os.path.join(BACKUP_DIR, f"sari_utang-{stamp}.db")
     # sqlite3's backup() makes a safe, complete copy even of a database in use.
-    with sqlite3.connect(app.config["DATABASE"]) as source, sqlite3.connect(target) as copy:
+    with sqlite3.connect(database) as source, sqlite3.connect(target) as copy:
         source.backup(copy)
 
     backups = sorted(f for f in os.listdir(BACKUP_DIR) if f.startswith("sari_utang-") and f.endswith(".db"))
@@ -131,6 +142,37 @@ def remove_pid_file():
         os.remove(PID_FILE)
 
 
+def restart(background):
+    """Start again with the newly pulled code."""
+    print("Restarting with the new version...")
+    env = dict(os.environ, **{RESTARTED: "1"})
+    if os.name != "nt":
+        os.execve(sys.executable, [sys.executable] + sys.argv, env)  # replace this process
+    if not background:
+        os._exit(RESTART_EXIT_CODE)  # run.bat sees this and starts the app again
+    # Background on Windows: start a new copy without a window, then end this one.
+    subprocess.Popen([sys.executable] + sys.argv, cwd=APP_DIR, env=env,
+                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    os._exit(0)
+
+
+def keep_updating(background):
+    """While the app runs, check for a new version every few hours (the laptop may stay on)."""
+    while True:
+        time.sleep(UPDATE_CHECK_HOURS * 3600)
+        if updater.update():
+            restart(background)
+
+
+def wait_for_old_version_to_stop():
+    """After an update restart, the old copy may still be letting go of the port."""
+    for _ in range(40):
+        if not is_running():
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Start Sari Utang.")
     parser.add_argument("--background", action="store_true", help="no window; messages go to logs/")
@@ -146,6 +188,17 @@ def main():
         log_to_file()
     else:
         sys.stdout.reconfigure(line_buffering=True)  # show messages right away
+
+    restarted = os.environ.pop(RESTARTED, None) == "1"
+    if restarted:
+        wait_for_old_version_to_stop()
+    elif not is_running() and updater.update():
+        restart(args.background)  # run the code that was just pulled
+
+    import db
+    from waitress import serve
+
+    from app import app
 
     if is_running():
         print(f"Sari Utang is already running: {LOCAL_URL}")
@@ -163,10 +216,10 @@ def main():
                 return
             db.set_pin(ask_for_pin())
 
-    backup = backup_database()
+    backup = backup_database(app.config["DATABASE"])
     address = wifi_address()
 
-    os.makedirs(app.instance_path, exist_ok=True)
+    os.makedirs(INSTANCE_DIR, exist_ok=True)
     with open(PID_FILE, "w") as f:
         f.write(str(os.getpid()))
 
@@ -189,6 +242,7 @@ def main():
 
     if args.open:
         threading.Timer(1.5, webbrowser.open, [LOCAL_URL]).start()  # after the server is up
+    threading.Thread(target=keep_updating, args=(args.background,), daemon=True).start()
     try:
         serve(app, host="0.0.0.0", port=PORT, threads=4)
     finally:

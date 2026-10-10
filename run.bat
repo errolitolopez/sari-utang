@@ -34,8 +34,11 @@ if errorlevel 1 (
     copy /y requirements.txt .venv\installed-requirements.txt >nul
 )
 
-rem 3. Start (database, PIN, backup, server)
+rem 3. Start (update, database, PIN, backup, server)
+:start
 ".venv\Scripts\python.exe" start.py
+rem Exit code 3 = the app updated itself from GitHub and wants to start again
+if %errorlevel%==3 goto start
 echo.
 echo Sari Utang stopped.
 pause
