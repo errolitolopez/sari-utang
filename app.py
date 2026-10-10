@@ -419,13 +419,44 @@ def products_page():
     return render_template("products.html", units=load_units())
 
 
+MAX_PER_PAGE = 100
+
+
 @app.get("/api/products")
 @login_required_api
 def api_list_products():
-    rows = db.get_db().execute(
-        "SELECT id, name, price, unit FROM products ORDER BY name COLLATE NOCASE, price"
+    """Products, A-Z.
+
+    Without ?page= : all products (the utang form searches all of them).
+    With ?page=2&per_page=20&q=coke : one page of the products whose name has "coke".
+    """
+    conn = db.get_db()
+    page = request.args.get("page", type=int)
+    if page is None:
+        rows = conn.execute(
+            "SELECT id, name, price, unit FROM products ORDER BY name COLLATE NOCASE, price"
+        ).fetchall()
+        return jsonify(products=[dict(row) for row in rows])
+
+    per_page = min(max(request.args.get("per_page", default=20, type=int), 1), MAX_PER_PAGE)
+    query = " ".join(request.args.get("q", "").split())
+    # In LIKE, % and _ are wildcards; escape them so searching "50%" finds "50%".
+    pattern = "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    where = "WHERE name LIKE ? ESCAPE '\\'"
+
+    total = conn.execute(f"SELECT COUNT(*) FROM products {where}", (pattern,)).fetchone()[0]
+    pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), pages)  # e.g. page 9 of 3 -> page 3
+    rows = conn.execute(
+        f"SELECT id, name, price, unit FROM products {where} "
+        "ORDER BY name COLLATE NOCASE, price LIMIT ? OFFSET ?",
+        (pattern, per_page, (page - 1) * per_page),
     ).fetchall()
-    return jsonify(products=[dict(row) for row in rows])
+    all_count = conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+    return jsonify(
+        products=[dict(row) for row in rows],
+        page=page, per_page=per_page, pages=pages, total=total, all_count=all_count,
+    )
 
 
 @app.post("/api/products")

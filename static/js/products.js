@@ -1,7 +1,10 @@
-// Product list: loads all products, filters them as you type, adds new ones,
+// Product list: one page at a time (search is done on the server), adds new ones,
 // and edits a product when you tap it (prices change often).
 
-let products = []; // everything from /api/products, filtered on the page
+const PER_PAGE = 20;
+let page = 1; // the page being shown
+let pages = 1; // how many pages there are for the current search
+let loadNumber = 0; // only the newest request updates the list (typing fast sends several)
 let editingId = null; // null = adding a new product, a number = editing that product
 
 const list = document.getElementById("product-list");
@@ -53,34 +56,52 @@ function messageItem(text) {
   return div;
 }
 
-function render() {
-  const query = searchInput.value.trim().toLowerCase();
-  const shown = products.filter((p) => p.name.toLowerCase().includes(query));
-
-  if (products.length === 0) {
+function render(data) {
+  const searching = searchInput.value.trim() !== "";
+  if (data.all_count === 0) {
     list.replaceChildren(messageItem("No products yet. Tap + Add to add one."));
-  } else if (shown.length === 0) {
+  } else if (data.products.length === 0) {
     list.replaceChildren(messageItem("No product matches your search."));
   } else {
-    list.replaceChildren(...shown.map(productItem));
+    list.replaceChildren(...data.products.map(productItem));
   }
 
-  document.getElementById("product-summary").textContent = `${products.length} total`;
+  document.getElementById("product-summary").textContent = searching
+    ? `${data.total} found`
+    : `${data.all_count} total`;
+
+  // ‹ Prev · Page 2 of 3 · Next ›
+  page = data.page;
+  pages = data.pages;
+  document.getElementById("pager").classList.toggle("d-none", pages <= 1);
+  document.getElementById("page-info").textContent = `Page ${page} of ${pages}`;
+  document.getElementById("prev-page").disabled = page <= 1;
+  document.getElementById("next-page").disabled = page >= pages;
 }
 
+// Loads one page of products from the server (search is done on the server too).
 async function loadProducts() {
+  const thisLoad = ++loadNumber;
+  const query = encodeURIComponent(searchInput.value.trim());
   try {
-    const response = await apiFetch("/api/products");
-    if (!response) return;
+    const response = await apiFetch(`/api/products?page=${page}&per_page=${PER_PAGE}&q=${query}`);
+    if (!response || thisLoad !== loadNumber) return; // a newer search is on its way
     if (!response.ok) {
       showError("products-error", "Could not load products.");
       return;
     }
-    products = (await response.json()).products;
-    render();
-  } catch {
+    hideError("products-error");
+    render(await response.json());
+  } catch (error) {
+    console.error(error);
     showError("products-error", "Cannot reach the server. Check your connection.");
   }
+}
+
+function goToPage(newPage) {
+  page = newPage;
+  loadProducts();
+  window.scrollTo({ top: 0 });
 }
 
 // Selects a unit in the dropdown. If the unit was removed from config/units.json
@@ -218,6 +239,17 @@ document.getElementById("import-form").addEventListener("submit", async (event) 
 
 document.getElementById("add-product-button").addEventListener("click", () => openForm(null));
 modalElement.addEventListener("shown.bs.modal", () => nameInput.focus());
-searchInput.addEventListener("input", render);
+document.getElementById("prev-page").addEventListener("click", () => goToPage(page - 1));
+document.getElementById("next-page").addEventListener("click", () => goToPage(page + 1));
+
+// Search after a short pause in typing, starting again from page 1.
+let searchTimer = null;
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    page = 1;
+    loadProducts();
+  }, 250);
+});
 
 loadProducts();
