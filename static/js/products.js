@@ -12,6 +12,7 @@ const form = document.getElementById("product-form");
 const modalTitle = document.getElementById("product-modal-title");
 const nameInput = document.getElementById("product-name");
 const priceInput = document.getElementById("product-price");
+const unitSelect = document.getElementById("product-unit");
 const saveButton = document.getElementById("save-product-button");
 
 // "12.5" -> 1250 centavos. Returns null if it is not a valid price.
@@ -38,7 +39,7 @@ function productItem(product) {
 
   const price = document.createElement("span");
   price.className = "fw-semibold";
-  price.textContent = formatAmount(product.price);
+  price.textContent = `${formatAmount(product.price)} / ${product.unit}`;
 
   button.append(name, price);
   button.addEventListener("click", () => openForm(product));
@@ -88,6 +89,7 @@ function openForm(product) {
   modalTitle.textContent = product ? "Edit product" : "Add product";
   nameInput.value = product ? product.name : "";
   priceInput.value = product ? priceForInput(product.price) : "";
+  unitSelect.value = product ? product.unit : "pc";
   hideError("product-form-error");
   modal.show();
 }
@@ -115,7 +117,7 @@ form.addEventListener("submit", async (event) => {
     const response = await apiFetch(url, {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, price }),
+      body: JSON.stringify({ name, price, unit: unitSelect.value }),
     });
     if (!response) return;
     const data = await response.json();

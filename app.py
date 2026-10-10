@@ -218,23 +218,40 @@ def api_add_customer():
 
 MAX_PRICE = 100_000_00  # P100,000.00 in centavos, catches typos like an extra zero
 
+# What one "price" buys. The order here is the order in the dropdown.
+UNITS = {
+    "pc": "pc (piraso)",
+    "pack": "pack",
+    "sachet": "sachet",
+    "bottle": "bottle",
+    "can": "can",
+    "kg": "kg (kilo)",
+    "g": "g (gram)",
+    "L": "L (litro)",
+    "ml": "ml",
+    "oz": "oz (ounce)",
+}
+
 
 def read_product_form():
-    """Check the name and price sent by the page. Returns (name, price, error)."""
+    """Check the name, price and unit sent by the page. Returns (product, error)."""
     data = request.get_json(silent=True) or {}
     name = " ".join(str(data.get("name", "")).split())
     price = data.get("price")
+    unit = data.get("unit")
 
     if not name:
-        return None, None, "Name is required."
+        return None, "Name is required."
     if len(name) > 100:
-        return None, None, "Name is too long (max 100 characters)."
+        return None, "Name is too long (max 100 characters)."
     # bool is a kind of int in Python, so rule it out (True would count as 1).
     if not isinstance(price, int) or isinstance(price, bool) or price <= 0:
-        return None, None, "Price must be more than P0."
+        return None, "Price must be more than P0."
     if price > MAX_PRICE:
-        return None, None, "Price is too high (max P100,000)."
-    return name, price, None
+        return None, "Price is too high (max P100,000)."
+    if not isinstance(unit, str) or unit not in UNITS:
+        return None, "Choose a unit from the list."
+    return {"name": name, "price": price, "unit": unit}, None
 
 
 def product_name_taken(name, except_id=None):
@@ -247,14 +264,14 @@ def product_name_taken(name, except_id=None):
 @app.get("/products")
 @login_required_page
 def products_page():
-    return render_template("products.html")
+    return render_template("products.html", units=UNITS)
 
 
 @app.get("/api/products")
 @login_required_api
 def api_list_products():
     rows = db.get_db().execute(
-        "SELECT id, name, price FROM products ORDER BY name COLLATE NOCASE"
+        "SELECT id, name, price, unit FROM products ORDER BY name COLLATE NOCASE"
     ).fetchall()
     return jsonify(products=[dict(row) for row in rows])
 
@@ -262,16 +279,18 @@ def api_list_products():
 @app.post("/api/products")
 @login_required_api
 def api_add_product():
-    name, price, error = read_product_form()
+    product, error = read_product_form()
     if error:
         return jsonify(error=error), 400
-    if product_name_taken(name):
-        return jsonify(error=f"{name} is already in the list."), 409
+    if product_name_taken(product["name"]):
+        return jsonify(error=f"{product['name']} is already in the list."), 409
 
     conn = db.get_db()
-    cursor = conn.execute("INSERT INTO products (name, price) VALUES (?, ?)", (name, price))
+    cursor = conn.execute(
+        "INSERT INTO products (name, price, unit) VALUES (:name, :price, :unit)", product
+    )
     conn.commit()
-    return jsonify(product={"id": cursor.lastrowid, "name": name, "price": price}), 201
+    return jsonify(product={"id": cursor.lastrowid, **product}), 201
 
 
 @app.put("/api/products/<int:product_id>")
@@ -281,12 +300,15 @@ def api_update_product(product_id):
     if conn.execute("SELECT 1 FROM products WHERE id = ?", (product_id,)).fetchone() is None:
         return jsonify(error="Product not found."), 404
 
-    name, price, error = read_product_form()
+    product, error = read_product_form()
     if error:
         return jsonify(error=error), 400
-    if product_name_taken(name, except_id=product_id):
-        return jsonify(error=f"{name} is already in the list."), 409
+    if product_name_taken(product["name"], except_id=product_id):
+        return jsonify(error=f"{product['name']} is already in the list."), 409
 
-    conn.execute("UPDATE products SET name = ?, price = ? WHERE id = ?", (name, price, product_id))
+    conn.execute(
+        "UPDATE products SET name = :name, price = :price, unit = :unit WHERE id = :id",
+        {**product, "id": product_id},
+    )
     conn.commit()
-    return jsonify(product={"id": product_id, "name": name, "price": price})
+    return jsonify(product={"id": product_id, **product})

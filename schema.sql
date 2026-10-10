@@ -24,9 +24,11 @@ CREATE TABLE IF NOT EXISTS transactions (
     date        TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
--- Items sold in the store. price is in centavos, like transactions.amount.
+-- Items sold in the store. price is in centavos, like transactions.amount,
+-- and is the price for one unit (e.g. P20.00 per pc, P65.00 per kg).
 CREATE TABLE IF NOT EXISTS products (
     id    INTEGER PRIMARY KEY AUTOINCREMENT,
     name  TEXT NOT NULL,
-    price INTEGER NOT NULL CHECK (price > 0)
+    price INTEGER NOT NULL CHECK (price > 0),
+    unit  TEXT NOT NULL DEFAULT 'pc'
 );

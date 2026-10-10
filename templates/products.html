@@ -39,12 +39,22 @@
           <input id="product-name" class="form-control" maxlength="100" autocomplete="off"
                  placeholder="Lucky Me Pancit Canton" required>
         </div>
-        <div class="mb-3">
-          <label for="product-price" class="form-label">Price</label>
-          <div class="input-group">
-            <span class="input-group-text">₱</span>
-            <input id="product-price" class="form-control" inputmode="decimal" autocomplete="off"
-                   placeholder="0.00" required>
+        <div class="row g-2 mb-3">
+          <div class="col-7">
+            <label for="product-price" class="form-label">Price</label>
+            <div class="input-group">
+              <span class="input-group-text">₱</span>
+              <input id="product-price" class="form-control" inputmode="decimal" autocomplete="off"
+                     placeholder="0.00" required>
+            </div>
+          </div>
+          <div class="col-5">
+            <label for="product-unit" class="form-label">Per</label>
+            <select id="product-unit" class="form-select">
+              {% for value, label in units.items() %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
         <div id="product-form-error" class="alert alert-danger py-2 mb-0 d-none" role="alert"></div>

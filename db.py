@@ -32,9 +32,23 @@ def get_setting(key):
 @with_appcontext
 def init_db_command():
     """Create the tables (safe to run again, existing data is kept)."""
+    db = get_db()
     with current_app.open_resource("schema.sql") as f:
-        get_db().executescript(f.read().decode("utf8"))
+        db.executescript(f.read().decode("utf8"))
+    add_missing_columns(db)
     click.echo("Database ready.")
+
+
+def add_missing_columns(db):
+    """Update tables made by an older version of schema.sql.
+
+    CREATE TABLE IF NOT EXISTS skips tables that already exist, so new columns
+    have to be added here for databases created before the column existed.
+    """
+    product_columns = [row["name"] for row in db.execute("PRAGMA table_info(products)")]
+    if "unit" not in product_columns:
+        db.execute("ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'pc'")
+    db.commit()
 
 
 @click.command("set-pin")
