@@ -29,10 +29,10 @@ Requires Python 3.10+.
 
 ### Everyday use (the store's computer)
 
-- **Windows:** see [SETUP-WINDOWS.md](SETUP-WINDOWS.md) — double-click `run.bat`.
+- **Windows:** see [SETUP-WINDOWS.md](SETUP-WINDOWS.md) — `run.bat` the first time (sets the PIN), then `create-shortcuts.bat` for Desktop icons that run it in the background (no window).
 - **Linux/Mac:** `pip install -r requirements.txt` in a virtual environment, then `python start.py`.
 
-`start.py` updates the database, asks for a PIN the first time, backs up the database to `backups/` (last 30 kept), and serves the app with Waitress on port 5000 for phones on the same Wi-Fi.
+`start.py` (`--background` = no window, logs to `logs/`; `--open` = open the browser; `--stop` = stop it) updates the database, asks for a PIN the first time, backs up the database to `backups/` (last 30 kept), and serves the app with Waitress on port 5000 for phones on the same Wi-Fi.
 
 ### Quick start (development)
 
@@ -112,7 +112,9 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
 start.py           everyday start: database, PIN, backup, Waitress server
-run.bat            Windows: double-click to start (also change-pin.bat, install-/remove-autostart.bat)
+run.bat            Windows: first-time setup / start with a window
+create-shortcuts.bat  Windows: Desktop icons "Sari Utang" (background + browser) and "Stop Sari Utang"
+windows/           helper that makes the Windows shortcuts (also used by install-autostart.bat)
 seed.py            sample products, customers, utang and payments (flask --app app seed)
 invoice_pdf.py     invoice PDFs (fpdf2), A6 receipt layout
 fonts/             DejaVu Sans font for PDFs (has the ₱ sign), with its license

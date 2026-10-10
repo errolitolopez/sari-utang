@@ -51,12 +51,21 @@ at bubuksan ito sa phone gamit ang parehong Wi-Fi.
 - Kung nag-restart ang router, puwedeng magbago ang address — tingnan ulit ang window ng Sari Utang.
   (Para hindi na magbago: sa settings ng router, mag-set ng *DHCP reservation / static IP* para sa computer.)
 
-## 5. Kusang bubukas pag in-on ang computer (recommended)
+## 5. Desktop icon at auto-start (walang itim na window)
 
-- I-double-click ang **`install-autostart.bat`**. Mula ngayon, kusang magsisimula ang Sari Utang (naka-minimize) pag in-on ang computer.
-- Para tanggalin: **`remove-autostart.bat`**.
-- Para hindi mag-sleep ang computer habang bukas ang tindahan:
-  *Settings → System → Power → Screen and sleep → "When plugged in, put my device to sleep after": **Never***.
+Pagkatapos ma-set ang PIN sa `run.bat`, **isara na ang window na iyon** at gamitin ang mga ito:
+
+1. I-double-click ang **`create-shortcuts.bat`**. Magkakaroon ng 2 icon sa Desktop:
+   - **Sari Utang** — magsisimula ang app **sa background** (walang itim na window) at bubuksan sa browser.
+     Kung tumatakbo na, bubuksan lang ang browser.
+   - **Stop Sari Utang** — ihihinto ang app.
+2. I-double-click ang **`install-autostart.bat`** para kusang magsimula (sa background din) pag in-on ang computer.
+   Para tanggalin: **`remove-autostart.bat`**.
+3. Para hindi mag-sleep ang computer habang bukas ang tindahan:
+   *Settings → System → Power → Screen and sleep → "When plugged in, put my device to sleep after": **Never***.
+
+> Dahil walang window sa background, ang address para sa phone at mga mensahe ay nasa
+> **`logs\sari-utang.log`** (buksan sa Notepad). Kung may problema, patakbuhin ang `run.bat` para makita ang window.
 
 ## 6. Mga dapat tandaan
 
@@ -65,13 +74,15 @@ at bubuksan ito sa phone gamit ang parehong Wi-Fi.
 | Palitan ang PIN | I-double-click ang `change-pin.bat` |
 | Palitan ang pangalan ng tindahan (sa invoice) | Buksan ang `config\settings.json` sa Notepad, palitan ang `"store_name"`, i-save, i-refresh ang page |
 | Magdagdag ng unit (hal. "tali") | `config\units.json` sa Notepad |
-| Ihinto ang app | Isara ang window ng Sari Utang |
+| Buksan ang app | Desktop icon **Sari Utang** |
+| Ihinto ang app | Desktop icon **Stop Sari Utang** (o isara ang window kung `run.bat` ang ginamit) |
+| Makita ang address para sa phone | Buksan ang `logs\sari-utang.log`, o patakbuhin ang `run.bat` |
 
 ### Backup
 
 - Tuwing magsisimula ang app, may kopya ang listahan sa folder na **`backups`** (huling 30 ang tinatago).
 - Mga isang beses kada linggo, **kopyahin ang `backups` folder** sa USB o Google Drive, para ligtas kahit masira ang computer.
-- **Para ibalik ang backup:** isara ang Sari Utang → kopyahin ang napiling file mula sa `backups` papunta sa
+- **Para ibalik ang backup:** ihinto ang Sari Utang (**Stop Sari Utang**) → kopyahin ang napiling file mula sa `backups` papunta sa
   `instance\sari_utang.db` (palitan ang luma) → patakbuhin ulit ang `run.bat`.
 
 ### Pag-update ng app sa susunod
@@ -81,4 +92,4 @@ Kopyahin ang bagong files sa `C:\SariUtang` at palitan ang luma, **pero huwag ga
 - `backups\`
 - `config\` (kung binago ninyo ang pangalan ng tindahan o units)
 
-Tapos patakbuhin ang `run.bat`; kusa itong mag-a-update ng database at packages.
+Ihinto muna ang app (**Stop Sari Utang**), tapos patakbuhin ang `run.bat` isang beses; kusa itong mag-a-update ng database at packages.
