@@ -4,6 +4,7 @@ Run with: flask --app app run --debug
 """
 
 import os
+import re
 import secrets
 import time
 from datetime import timedelta
@@ -91,6 +92,12 @@ def dashboard_page():
     return render_template("dashboard.html")
 
 
+@app.get("/customers")
+@login_required_page
+def customers_page():
+    return render_template("customers.html")
+
+
 # --- API ---------------------------------------------------------------------
 
 @app.post("/api/login")
@@ -127,23 +134,27 @@ def api_logout():
     return jsonify(ok=True)
 
 
-@app.get("/api/dashboard")
-@login_required_api
-def api_dashboard():
-    conn = db.get_db()
-
-    # Balance per customer = total utang - total payments. All amounts are in centavos.
-    balances = conn.execute(
-        """
-        SELECT c.id, c.name,
+def customer_balances(order_by):
+    """All customers with their balance (total utang - total payments, in centavos)."""
+    return db.get_db().execute(
+        f"""
+        SELECT c.id, c.name, c.phone,
                COALESCE(SUM(CASE WHEN t.type = 'utang' THEN t.amount ELSE -t.amount END), 0)
                    AS balance
         FROM customers c
         LEFT JOIN transactions t ON t.customer_id = c.id
         GROUP BY c.id
-        ORDER BY balance DESC
+        ORDER BY {order_by}
         """
     ).fetchall()
+
+
+@app.get("/api/dashboard")
+@login_required_api
+def api_dashboard():
+    conn = db.get_db()
+
+    balances = customer_balances(order_by="balance DESC")
     with_utang = [row for row in balances if row["balance"] > 0]
 
     recent = conn.execute(
@@ -163,3 +174,41 @@ def api_dashboard():
         top_balances=[dict(row) for row in with_utang[:5]],
         recent_transactions=[dict(row) for row in recent],
     )
+
+
+@app.get("/api/customers")
+@login_required_api
+def api_list_customers():
+    rows = customer_balances(order_by="c.name COLLATE NOCASE")
+    return jsonify(customers=[dict(row) for row in rows])
+
+
+@app.post("/api/customers")
+@login_required_api
+def api_add_customer():
+    data = request.get_json(silent=True) or {}
+    # " ".join(split()) trims the ends and turns double spaces into one.
+    name = " ".join(str(data.get("name", "")).split())
+    phone = str(data.get("phone") or "").strip()
+
+    if not name:
+        return jsonify(error="Name is required."), 400
+    if len(name) > 100:
+        return jsonify(error="Name is too long (max 100 characters)."), 400
+    if phone and not re.fullmatch(r"[0-9+\- ]{7,20}", phone):
+        return jsonify(error="Phone can only have numbers, spaces, + and - (7 to 20 characters)."), 400
+
+    conn = db.get_db()
+    # Two customers with the same name would be confusing in the list.
+    same_name = conn.execute(
+        "SELECT 1 FROM customers WHERE name = ? COLLATE NOCASE", (name,)
+    ).fetchone()
+    if same_name:
+        return jsonify(error=f"{name} is already in the list."), 409
+
+    cursor = conn.execute(
+        "INSERT INTO customers (name, phone) VALUES (?, ?)", (name, phone or None)
+    )
+    conn.commit()
+    customer = {"id": cursor.lastrowid, "name": name, "phone": phone or None, "balance": 0}
+    return jsonify(customer=customer), 201

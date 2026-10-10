@@ -1,18 +1,5 @@
 // Loads the summary from /api/dashboard and fills in the page.
 
-const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
-
-// Amounts from the server are in centavos (1250 = P12.50).
-function formatAmount(centavos) {
-  return peso.format(centavos / 100);
-}
-
-function showError(message) {
-  const box = document.getElementById("dashboard-error");
-  box.textContent = message;
-  box.classList.remove("d-none");
-}
-
 // Builds one list row. textContent is used (not innerHTML) so names can't inject HTML.
 function listItem(title, subtitle, amountText, amountClass) {
   const li = document.createElement("li");
@@ -75,24 +62,16 @@ function render(data) {
 
 async function loadDashboard() {
   try {
-    const response = await fetch("/api/dashboard");
-    if (response.status === 401) {
-      window.location.href = "/login";
-      return;
-    }
+    const response = await apiFetch("/api/dashboard");
+    if (!response) return;
     if (!response.ok) {
-      showError("Could not load the dashboard.");
+      showError("dashboard-error", "Could not load the dashboard.");
       return;
     }
     render(await response.json());
   } catch {
-    showError("Cannot reach the server. Check your connection.");
+    showError("dashboard-error", "Cannot reach the server. Check your connection.");
   }
 }
-
-document.getElementById("logout-button").addEventListener("click", async () => {
-  await fetch("/api/logout", { method: "POST" });
-  window.location.href = "/login";
-});
 
 loadDashboard();
