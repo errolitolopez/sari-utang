@@ -20,6 +20,17 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 
 Requires Python 3.10+.
 
+### Quick start
+
+```bash
+./run.sh          # run on this computer: http://127.0.0.1:5000
+./run.sh phone    # also open it from a phone on the same Wi-Fi
+```
+
+The first run creates the virtual environment, installs Flask, creates the database and asks for a PIN. After that it just starts the app.
+
+### Manual steps
+
 ```bash
 # 1. Create a virtual environment and install Flask
 python3 -m venv .venv
@@ -38,7 +49,7 @@ flask --app app run --debug
 
 Open http://127.0.0.1:5000 and log in with your PIN.
 
-To open it from a phone on the same Wi-Fi, run `flask --app app run --host 0.0.0.0` and visit `http://<your-computer-ip>:5000`.
+To open it from a phone on the same Wi-Fi, use `./run.sh phone` (or `flask --app app run --host 0.0.0.0`, never with `--debug`) and visit `http://<your-computer-ip>:5000`.
 
 ## Project structure
 
