@@ -12,6 +12,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, optional note. Paying more than the utang counts as paid in full and shows the sukli (change)
+- Invoice per customer: every utang (items, qty × price) and bayad since they last owed nothing, summary by product, total, balance. Print / save as PDF, copy as text for Messenger/Viber, or send by SMS
 - Singilin list: everyone who owes, longest-waiting first, with filters (7+, 15+, 30+ days). "Matagal" (default 30 days) is set in [config/settings.json](#settings-configsettingsjson) and shown on the Dashboard
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
 - Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
@@ -88,10 +89,12 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 
 ```json
 {
+  "store_name": "Sari-Sari Store",
   "overdue_days": 30
 }
 ```
 
+- `store_name`: shown at the top of invoices.
 - `overdue_days` (1 to 365): an utang unpaid this many days or more counts as "matagal". Those customers are red in the Singilin list and counted on the Dashboard. Edit and refresh, no restart needed.
 
 ## Project structure
