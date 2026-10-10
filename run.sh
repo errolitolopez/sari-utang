@@ -29,8 +29,13 @@ row = sqlite3.connect('instance/sari_utang.db').execute(
 print('yes' if row else 'no')
 ")
 if [ "$has_pin" = "no" ]; then
-  echo "No PIN set yet. Choose a 4 to 6 digit PIN."
-  .venv/bin/flask --app app set-pin
+  read -r -s -p "No PIN set yet. Enter a 4 to 6 digit PIN (leave empty for 0000): " pin || true
+  echo
+  if [ -z "$pin" ]; then
+    pin="0000"
+    echo "Using the default PIN 0000. Change it with: .venv/bin/flask --app app set-pin"
+  fi
+  .venv/bin/flask --app app set-pin --pin "$pin"
 fi
 
 # 4. Start the app

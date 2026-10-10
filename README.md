@@ -27,7 +27,7 @@ Requires Python 3.10+.
 ./run.sh phone    # also open it from a phone on the same Wi-Fi
 ```
 
-The first run creates the virtual environment, installs Flask, creates the database and asks for a PIN. After that it just starts the app.
+The first run creates the virtual environment, installs Flask, creates the database and asks for a PIN (press Enter for the default `0000`). After that it just starts the app.
 
 ### Manual steps
 
