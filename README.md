@@ -27,7 +27,14 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 
 Requires Python 3.10+.
 
-### Quick start
+### Everyday use (the store's computer)
+
+- **Windows:** see [SETUP-WINDOWS.md](SETUP-WINDOWS.md) — double-click `run.bat`.
+- **Linux/Mac:** `pip install -r requirements.txt` in a virtual environment, then `python start.py`.
+
+`start.py` updates the database, asks for a PIN the first time, backs up the database to `backups/` (last 30 kept), and serves the app with Waitress on port 5000 for phones on the same Wi-Fi.
+
+### Quick start (development)
 
 ```bash
 ./run.sh          # run on this computer: http://127.0.0.1:5000
@@ -104,6 +111,8 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 ```
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
+start.py           everyday start: database, PIN, backup, Waitress server
+run.bat            Windows: double-click to start (also change-pin.bat, install-/remove-autostart.bat)
 seed.py            sample products, customers, utang and payments (flask --app app seed)
 invoice_pdf.py     invoice PDFs (fpdf2), A6 receipt layout
 fonts/             DejaVu Sans font for PDFs (has the ₱ sign), with its license

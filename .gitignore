@@ -10,3 +10,6 @@ instance/
 .vscode/
 .idea/
 .DS_Store
+
+# Database backups made by start.py
+backups/

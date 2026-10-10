@@ -3,3 +3,5 @@ fpdf2==2.8.9
 openpyxl==3.1.5
 # Lets openpyxl read uploaded Excel files safely
 defusedxml==0.7.1
+# Server for everyday use (start.py / run.bat)
+waitress==3.0.2

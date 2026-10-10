@@ -28,14 +28,19 @@ def get_setting(key):
     return row["value"] if row else None
 
 
-@click.command("init-db")
-@with_appcontext
-def init_db_command():
+def init_db():
     """Create the tables (safe to run again, existing data is kept)."""
     db = get_db()
     with current_app.open_resource("schema.sql") as f:
         db.executescript(f.read().decode("utf8"))
     add_missing_columns(db)
+
+
+@click.command("init-db")
+@with_appcontext
+def init_db_command():
+    """Create the tables (safe to run again, existing data is kept)."""
+    init_db()
     click.echo("Database ready.")
 
 
@@ -64,17 +69,25 @@ def add_missing_columns(db):
 @click.password_option("--pin", prompt="New PIN", help="4 to 6 digits.")
 def set_pin_command(pin):
     """Set or change the login PIN."""
-    if not (pin.isdigit() and 4 <= len(pin) <= 6):
+    if not is_valid_pin(pin):
         raise click.BadParameter("PIN must be 4 to 6 digits.")
+    set_pin(pin)
+    click.echo("PIN saved.")
+
+
+def is_valid_pin(pin):
+    return pin.isdigit() and 4 <= len(pin) <= 6
+
+
+def set_pin(pin):
+    """Save the login PIN. Only the hash is saved, never the PIN itself."""
     db = get_db()
-    # Only the hash is saved, never the PIN itself.
     db.execute(
         "INSERT INTO settings (key, value) VALUES ('pin_hash', ?) "
         "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
         (generate_password_hash(pin),),
     )
     db.commit()
-    click.echo("PIN saved.")
 
 
 def init_app(app):
