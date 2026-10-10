@@ -8,6 +8,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import time
 import zipfile
 from datetime import date, timedelta
@@ -52,6 +53,23 @@ def load_secret_key():
 
 app.secret_key = load_secret_key()
 db.init_app(app)
+
+CONFIG_DIR = os.path.join(app.root_path, "config")
+
+
+def ensure_config_files():
+    """config/settings.json and config/units.json are this store's own copies, not in git.
+
+    The first time, they are copied from the *.example.json files that come with the app.
+    Because git ignores them, editing them (store name, units) never blocks an update.
+    """
+    for name in ("settings", "units"):
+        path = os.path.join(CONFIG_DIR, f"{name}.json")
+        if not os.path.exists(path):
+            shutil.copyfile(os.path.join(CONFIG_DIR, f"{name}.example.json"), path)
+
+
+ensure_config_files()
 app.cli.add_command(seed.seed_command)
 
 
@@ -208,7 +226,8 @@ def find_customer(customer_id):
 
 # --- Singilin (customers to collect from) -------------------------------------
 
-SETTINGS_FILE = os.path.join(app.root_path, "config", "settings.json")
+SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
+SETTINGS_EXAMPLE_FILE = os.path.join(CONFIG_DIR, "settings.example.json")
 
 
 def load_settings():
@@ -217,9 +236,16 @@ def load_settings():
     overdue_days: an utang unpaid for this many days or more counts as "matagal".
     store_name:   shown at the top of invoices (optional).
     """
-    with open(SETTINGS_FILE, encoding="utf8") as f:
+    # Start from the example's values, so a setting added in a newer version
+    # still has a value even if this store's settings.json doesn't have it yet.
+    with open(SETTINGS_EXAMPLE_FILE, encoding="utf8") as f:
         settings = json.load(f)
-    days = settings.get("overdue_days") if isinstance(settings, dict) else None
+    with open(SETTINGS_FILE, encoding="utf8") as f:
+        own = json.load(f)
+    if not isinstance(own, dict):
+        raise ValueError(f'{SETTINGS_FILE} must look like {{"overdue_days": 30}}')
+    settings.update(own)
+    days = settings.get("overdue_days")
     if not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= 365:
         raise ValueError(f'{SETTINGS_FILE} must look like {{"overdue_days": 30}} (1 to 365)')
     store_name = settings.setdefault("store_name", "Sari-Sari Store")
@@ -410,7 +436,7 @@ def api_add_customer():
 
 MAX_PRICE = 100_000_00  # P100,000.00 in centavos, catches typos like an extra zero
 
-UNITS_FILE = os.path.join(app.root_path, "config", "units.json")
+UNITS_FILE = os.path.join(CONFIG_DIR, "units.json")
 
 
 def load_units():

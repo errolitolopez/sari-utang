@@ -16,3 +16,7 @@ backups/
 
 # Background mode log (start.py --background)
 logs/
+
+# This store's own settings and units (copied from the *.example.json files on first start)
+config/settings.json
+config/units.json
