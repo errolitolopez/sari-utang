@@ -147,6 +147,75 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+// --- Import from CSV ---------------------------------------------------------
+
+const importModalElement = document.getElementById("import-modal");
+const importModal = bootstrap.Modal.getOrCreateInstance(importModalElement);
+const importFile = document.getElementById("import-file");
+const importErrors = document.getElementById("import-errors");
+const importButton = document.getElementById("import-button");
+
+function showImportErrors(errors, total) {
+  const list = document.createElement("ul");
+  list.className = "mb-0 ps-3";
+  for (const error of errors) {
+    const li = document.createElement("li");
+    li.textContent = error;
+    list.append(li);
+  }
+  const title = document.createElement("div");
+  title.className = "fw-semibold mb-1";
+  title.textContent = "Nothing was imported. Fix these rows and try again:";
+  importErrors.replaceChildren(title, list);
+  if (total > errors.length) {
+    const more = document.createElement("div");
+    more.textContent = `…and ${total - errors.length} more.`;
+    importErrors.append(more);
+  }
+  importErrors.classList.remove("d-none");
+}
+
+importModalElement.addEventListener("show.bs.modal", () => {
+  importFile.value = "";
+  importErrors.classList.add("d-none");
+});
+
+document.getElementById("import-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  importErrors.classList.add("d-none");
+  if (!importFile.files.length) {
+    showImportErrors(["Choose a CSV file."], 1);
+    return;
+  }
+
+  const body = new FormData();
+  body.append("file", importFile.files[0]);
+  importButton.disabled = true;
+  try {
+    const response = await apiFetch("/api/products/import", { method: "POST", body });
+    if (!response) return;
+    if (response.status === 413) {
+      showImportErrors(["The file is too big (max 2 MB)."], 1);
+      return;
+    }
+    const data = await response.json();
+    if (!response.ok) {
+      showImportErrors(data.errors || ["Could not import the file."], data.error_count || 1);
+      return;
+    }
+    importModal.hide();
+    document.getElementById("import-message-text").textContent =
+      `Import done: ${data.added} added, ${data.updated} price updated, ${data.unchanged} unchanged.`;
+    document.getElementById("import-message").classList.remove("d-none");
+    await loadProducts();
+  } catch (error) {
+    console.error(error);
+    showImportErrors(["Cannot reach the server. Check your connection."], 1);
+  } finally {
+    importButton.disabled = false;
+  }
+});
+
 document.getElementById("add-product-button").addEventListener("click", () => openForm(null));
 modalElement.addEventListener("shown.bs.modal", () => nameInput.focus());
 searchInput.addEventListener("input", render);

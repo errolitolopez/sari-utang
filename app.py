@@ -4,6 +4,7 @@ Run with: flask --app app run --debug
 """
 
 import json
+import csv
 import io
 import os
 import re
@@ -33,6 +34,8 @@ app.config["DATABASE"] = os.path.join(app.instance_path, "sari_utang.db")
 # Stay logged in for 30 days so the PIN isn't asked every time.
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# Largest upload accepted (e.g. a products CSV). Bigger requests get "413 Too Large".
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2 MB
 
 
 def load_secret_key():
@@ -898,3 +901,137 @@ def invoices_zip_download():
         buffer, mimetype="application/zip", as_attachment=True,
         download_name=f"invoices-{today}.zip",
     )
+
+
+# --- Products import / export (CSV) --------------------------------------------
+
+CSV_COLUMNS = ["name", "price", "unit"]
+MAX_IMPORT_ROWS = 5000
+
+
+@app.get("/products/export.csv")
+@login_required_page
+def products_export():
+    """All products as a CSV file: name, price (in pesos, e.g. 20.00), unit."""
+    rows = db.get_db().execute(
+        "SELECT name, price, unit FROM products ORDER BY name COLLATE NOCASE, price"
+    ).fetchall()
+    text = io.StringIO()
+    writer = csv.writer(text)
+    writer.writerow(CSV_COLUMNS)
+    for row in rows:
+        writer.writerow([row["name"], f"{row['price'] / 100:.2f}", row["unit"]])
+    # utf-8-sig adds a small marker at the start so Excel shows ₱ and ñ correctly.
+    data = io.BytesIO(text.getvalue().encode("utf-8-sig"))
+    return send_file(
+        data, mimetype="text/csv", as_attachment=True,
+        download_name=f"products-{date.today().isoformat()}.csv",
+    )
+
+
+def parse_csv_price(text, decimal_comma=False):
+    """ "20", "20.50", "₱1,234.50" -> centavos, or None if it isn't a valid price.
+
+    decimal_comma: files saved with ";" usually write prices as "1.234,50"
+    (comma for decimals), so swap the two before reading the number.
+    """
+    cleaned = text.replace("₱", "").replace("P", "").strip()
+    if decimal_comma:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    else:
+        cleaned = cleaned.replace(",", "")
+    if not re.fullmatch(r"\d+(\.\d{1,2})?", cleaned):
+        return None
+    centavos = int((Decimal(cleaned) * 100).to_integral_value())
+    return centavos if 0 < centavos <= MAX_PRICE else None
+
+
+def read_products_csv(raw_bytes):
+    """Check every row of an uploaded products CSV. Returns (products, errors).
+
+    Nothing is saved here; if errors is not empty, the import is cancelled.
+    """
+    try:
+        text = raw_bytes.decode("utf-8-sig")  # also removes Excel's marker, if any
+    except UnicodeDecodeError:
+        return [], ["The file is not a UTF-8 CSV. In Excel, use Save As → CSV UTF-8."]
+
+    # Some spreadsheets save with ";" instead of ",".
+    first_line = text.splitlines()[0] if text.strip() else ""
+    delimiter = ";" if first_line.count(";") > first_line.count(",") else ","
+    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+
+    header = [h.strip().lower() for h in next(reader, [])]
+    if header[:3] != CSV_COLUMNS:
+        return [], [f"The first row must be: {', '.join(CSV_COLUMNS)}"]
+
+    units = load_units()
+    units_lower = {u.lower(): u for u in units}  # "KG" in the file -> "kg"
+    products, errors, seen = [], [], set()
+    for line_number, row in enumerate(reader, start=2):
+        if not any(cell.strip() for cell in row):
+            continue  # skip empty lines
+        if len(products) + len(errors) >= MAX_IMPORT_ROWS:
+            errors.append(f"Too many rows (max {MAX_IMPORT_ROWS}).")
+            break
+        row = (row + ["", "", ""])[:3]
+        name = " ".join(row[0].split())
+        price = parse_csv_price(row[1], decimal_comma=(delimiter == ";"))
+        unit = units_lower.get(row[2].strip().lower())
+
+        problems = []
+        if not name or len(name) > 100:
+            problems.append("name is required (max 100 characters)")
+        if price is None:
+            problems.append(f'price "{row[1].strip()}" is not valid (e.g. 20 or 20.50, max 100,000)')
+        if unit is None:
+            problems.append(f'unit "{row[2].strip()}" is not in config/units.json')
+        key = (name.lower(), unit)
+        if not problems and key in seen:
+            problems.append(f"{name} per {unit} is already in the file above")
+        seen.add(key)
+
+        if problems:
+            errors.append(f"Row {line_number}: " + "; ".join(problems))
+        else:
+            products.append({"name": name, "price": price, "unit": unit})
+
+    if not products and not errors:
+        errors.append("The file has no products.")
+    return products, errors
+
+
+@app.post("/api/products/import")
+@login_required_api
+def api_import_products():
+    """Add new products and update prices of existing ones (same name + unit).
+
+    All or nothing: if any row has a problem, nothing is saved.
+    Products that are not in the file are left as they are.
+    """
+    upload = request.files.get("file")
+    if upload is None or not upload.filename:
+        return jsonify(errors=["Choose a CSV file."]), 400
+
+    products, errors = read_products_csv(upload.read())
+    if errors:
+        return jsonify(errors=errors[:20], error_count=len(errors)), 400
+
+    conn = db.get_db()
+    added = updated = unchanged = 0
+    for p in products:
+        existing = conn.execute(
+            "SELECT id, price FROM products WHERE name = ? COLLATE NOCASE AND unit = ?",
+            (p["name"], p["unit"]),
+        ).fetchone()
+        if existing is None:
+            conn.execute("INSERT INTO products (name, price, unit) VALUES (:name, :price, :unit)", p)
+            added += 1
+        elif existing["price"] != p["price"]:
+            conn.execute("UPDATE products SET price = ? WHERE id = ?", (p["price"], existing["id"]))
+            updated += 1
+        else:
+            unchanged += 1
+    conn.commit()  # everything is saved together
+
+    return jsonify(added=added, updated=updated, unchanged=unchanged)
