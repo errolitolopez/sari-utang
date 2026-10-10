@@ -4,20 +4,25 @@ Run with: flask --app app run --debug
 """
 
 import json
+import io
 import os
 import re
 import secrets
 import time
+import zipfile
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from urllib.parse import quote
 from functools import wraps
 
-from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Flask, abort, jsonify, redirect, render_template, request, send_file, session, url_for,
+)
 from werkzeug.security import check_password_hash
 
 import db
 import seed
+from invoice_pdf import invoice_pdf_bytes, peso, qty
 
 app = Flask(__name__, instance_relative_config=True)
 
@@ -709,16 +714,10 @@ def api_void_transaction(transaction_id):
 
 # --- Invoice -----------------------------------------------------------------
 
-@app.template_filter("peso")
-def peso_filter(centavos):
-    """1250 -> "₱12.50" (used in templates as {{ amount|peso }})"""
-    return f"₱{centavos / 100:,.2f}"
-
-
-@app.template_filter("qty")
-def quantity_filter(quantity):
-    """2.0 -> "2", 0.5 -> "0.5" (used in templates as {{ item.quantity|qty }})"""
-    return f"{Decimal(str(quantity)).normalize():f}"
+# {{ amount|peso }} -> "₱12.50" and {{ item.quantity|qty }} -> "0.5" in templates.
+# The functions live in invoice_pdf.py so the page and the PDF format numbers the same way.
+peso_filter = app.template_filter("peso")(peso)
+quantity_filter = app.template_filter("qty")(qty)
 
 
 def describe_item(item):
@@ -837,4 +836,65 @@ def invoice_page(customer_id):
         today=today,
         text=text,
         sms_link=sms_link,
+    )
+
+
+# --- Invoice PDFs and batch export (ZIP) -----------------------------------------
+
+def safe_filename(name, fallback):
+    """A customer name that is safe as a file name on phones and Windows.
+
+    Removes characters like / \\ : * ? " < > | that file names can't have.
+    """
+    cleaned = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", name).strip(" .")
+    return cleaned[:80] or fallback
+
+
+@app.get("/customers/<int:customer_id>/invoice.pdf")
+@login_required_page
+def invoice_pdf_download(customer_id):
+    customer = find_customer(customer_id)
+    if customer is None:
+        abort(404)
+    today = date.today().isoformat()
+    pdf = invoice_pdf_bytes(load_settings()["store_name"], customer, invoice_data(customer_id), today)
+    filename = safe_filename(customer["name"], f"customer-{customer_id}") + ".pdf"
+    return send_file(io.BytesIO(pdf), mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
+@app.get("/singilin/invoices.zip")
+@login_required_page
+def invoices_zip_download():
+    """One PDF invoice per customer with utang, named after the customer, in one ZIP.
+
+    ?min_days=30 only includes customers whose oldest unpaid utang is 30+ days old
+    (the same filter as the Singilin page). Without it, everyone with utang.
+    """
+    min_days = request.args.get("min_days", default=0, type=int)
+    customers = [c for c in collection_list() if c["days"] >= min_days]
+    if not customers:
+        abort(404, "No customers with utang for this filter.")
+
+    store_name = load_settings()["store_name"]
+    today = date.today().isoformat()
+    used_names = set()
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for c in customers:
+            customer = find_customer(c["id"])
+            pdf = invoice_pdf_bytes(store_name, customer, invoice_data(c["id"]), today)
+
+            # Two names can become the same after cleaning (e.g. "Jun?" and "Jun"): add (2), (3)...
+            base = safe_filename(customer["name"], f"customer-{customer['id']}")
+            filename, number = f"{base}.pdf", 2
+            while filename.lower() in used_names:
+                filename, number = f"{base} ({number}).pdf", number + 1
+            used_names.add(filename.lower())
+
+            archive.writestr(filename, pdf)
+
+    buffer.seek(0)
+    return send_file(
+        buffer, mimetype="application/zip", as_attachment=True,
+        download_name=f"invoices-{today}.zip",
     )

@@ -79,6 +79,13 @@ function render() {
   document.getElementById("singilin-summary").textContent =
     `${shown.length} customer${shown.length === 1 ? "" : "s"} · ${formatAmount(total)}`;
 
+  // The ZIP has one PDF invoice for each customer shown, so it follows the filter.
+  const zip = document.getElementById("download-zip");
+  zip.href = `/singilin/invoices.zip?min_days=${minDays}`;
+  zip.textContent = `Download invoices (ZIP, ${shown.length})`;
+  zip.classList.toggle("disabled", shown.length === 0);
+  zip.setAttribute("aria-disabled", String(shown.length === 0));
+
   if (shown.length) {
     list.replaceChildren(...shown.map(customerRow));
   } else {
