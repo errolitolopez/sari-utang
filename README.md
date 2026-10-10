@@ -8,13 +8,13 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
+- Customer (suki) list with balances, search by name or phone, add customers
 
 ### Planned
 
-- Customer (suki) list
+- Customer history page
 - Record utang entries per customer (items, amount, date)
 - Record payments, full or partial
-- Search customers
 
 ## Getting started
 
@@ -69,5 +69,7 @@ instance/          database and secret key (private, not in git)
 | POST | `/api/login` | Log in with `{"pin": "1234"}` |
 | POST | `/api/logout` | Log out |
 | GET | `/api/dashboard` | Summary numbers for the dashboard |
+| GET | `/api/customers` | All customers with their balances |
+| POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
 
 Amounts are in centavos (`1250` = ₱12.50).
