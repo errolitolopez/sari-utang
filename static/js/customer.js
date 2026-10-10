@@ -154,6 +154,15 @@ function openDetails(transaction) {
     ? "text-decoration-line-through text-body-secondary"
     : isUtang ? "text-danger" : "text-success";
 
+  // Payments with sukli: show the cash received and the change.
+  const cash = document.getElementById("details-cash");
+  cash.classList.toggle("d-none", !transaction.tendered);
+  if (transaction.tendered) {
+    cash.textContent =
+      `Natanggap ${formatAmount(transaction.tendered)} · ` +
+      `Sukli ${formatAmount(transaction.tendered - transaction.amount)}`;
+  }
+
   document.getElementById("details-note").classList.toggle("d-none", !transaction.note);
   document.getElementById("details-note-text").textContent = transaction.note || "";
 
@@ -396,19 +405,29 @@ const paymentNote = document.getElementById("payment-note");
 const savePaymentButton = document.getElementById("save-payment-button");
 
 // Shows what will be left after this payment as you type.
+// Paying more than the utang counts as paid in full; the extra is the sukli.
 function renderRemaining() {
   const amount = parsePrice(paymentAmount.value);
   const remaining = document.getElementById("payment-remaining");
+  const changeRow = document.getElementById("payment-change-row");
+  const change = amount ? amount - balance : 0;
+
   if (!amount) {
     remaining.textContent = "—";
     remaining.className = "fw-semibold";
-  } else if (amount > balance) {
-    remaining.textContent = "More than the utang";
-    remaining.className = "fw-semibold text-danger";
   } else {
-    remaining.textContent = formatAmount(balance - amount);
-    remaining.className = `fw-semibold ${balance - amount === 0 ? "text-success" : ""}`;
+    const left = Math.max(balance - amount, 0);
+    remaining.textContent = formatAmount(left);
+    remaining.className = `fw-semibold ${left === 0 ? "text-success" : ""}`;
   }
+
+  changeRow.classList.toggle("d-none", change <= 0);
+  document.getElementById("payment-change").textContent = change > 0 ? formatAmount(change) : "";
+}
+
+function showMessage(message) {
+  document.getElementById("customer-message-text").textContent = message;
+  document.getElementById("customer-message").classList.remove("d-none");
 }
 
 function openPaymentForm() {
@@ -435,11 +454,6 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
     paymentAmount.focus();
     return;
   }
-  if (amount > balance) {
-    showError("payment-error", `That is more than the utang (${formatAmount(balance)}).`);
-    paymentAmount.focus();
-    return;
-  }
 
   savePaymentButton.disabled = true;
   try {
@@ -460,6 +474,11 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
       return;
     }
     paymentModal.hide();
+    showMessage(
+      data.change > 0
+        ? `Bayad lahat ${formatAmount(data.transaction.amount)} · Sukli ${formatAmount(data.change)}`
+        : `Bayad ${formatAmount(data.transaction.amount)} saved.`
+    );
     await loadCustomer();
   } catch {
     showError("payment-error", "Cannot reach the server. Check your connection.");

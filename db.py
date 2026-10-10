@@ -54,6 +54,8 @@ def add_missing_columns(db):
         db.execute("ALTER TABLE transactions ADD COLUMN voided_at TEXT")
     if "void_reason" not in transaction_columns:
         db.execute("ALTER TABLE transactions ADD COLUMN void_reason TEXT")
+    if "tendered" not in transaction_columns:
+        db.execute("ALTER TABLE transactions ADD COLUMN tendered INTEGER")
     db.commit()
 
 

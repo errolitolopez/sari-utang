@@ -369,7 +369,7 @@ def api_customer_transactions(customer_id):
         dict(row, items=[])
         for row in conn.execute(
             """
-            SELECT id, type, amount, note, date, voided_at, void_reason FROM transactions
+            SELECT id, type, amount, note, date, voided_at, void_reason, tendered FROM transactions
             WHERE customer_id = ?
             ORDER BY date DESC, id DESC
             """,
@@ -527,25 +527,39 @@ def add_utang(customer, raw_items, note):
     return jsonify(transaction={"id": transaction_id, "amount": total, "items": items}), 201
 
 
+MAX_TENDERED = 1_000_000_00  # P1,000,000.00 in centavos, catches typos
+
+
 def add_payment(customer, amount, note):
-    """A payment lowers the balance. It can be partial, but not more than what is owed."""
+    """A payment lowers the balance. It can be partial.
+
+    If the customer hands over more than the utang, it counts as paid in full:
+    only the utang is recorded as paid, and the extra is the sukli (change).
+    """
     if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0:
         return jsonify(error="Amount must be more than P0."), 400
+    if amount > MAX_TENDERED:
+        return jsonify(error="Amount is too high (max P1,000,000)."), 400
     if customer["balance"] <= 0:
         return jsonify(error=f"{customer['name']} has no utang to pay."), 400
-    if amount > customer["balance"]:
-        owed = customer["balance"] / 100
-        return jsonify(error=f"That is more than the utang. {customer['name']} only owes P{owed:,.2f}."), 400
+
+    paid = min(amount, customer["balance"])
+    change = amount - paid  # sukli
+    tendered = amount if change > 0 else None  # cash received, kept only when there was sukli
 
     conn = db.get_db()
     cursor = conn.execute(
-        "INSERT INTO transactions (customer_id, type, amount, note) VALUES (?, 'payment', ?, ?)",
-        (customer["id"], amount, note or None),
+        "INSERT INTO transactions (customer_id, type, amount, note, tendered) "
+        "VALUES (?, 'payment', ?, ?, ?)",
+        (customer["id"], paid, note or None, tendered),
     )
     conn.commit()
 
-    balance = customer["balance"] - amount
-    return jsonify(transaction={"id": cursor.lastrowid, "amount": amount}, balance=balance), 201
+    return jsonify(
+        transaction={"id": cursor.lastrowid, "amount": paid, "tendered": tendered},
+        change=change,
+        balance=customer["balance"] - paid,
+    ), 201
 
 
 @app.post("/api/transactions/<int:transaction_id>/void")

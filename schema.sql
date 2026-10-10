@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     note        TEXT,
     date        TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     voided_at   TEXT,
-    void_reason TEXT
+    void_reason TEXT,
+    tendered    INTEGER  -- payments only: cash received when it was more than the utang
 );
 
 -- Items sold in the store. price is in centavos, like transactions.amount,
