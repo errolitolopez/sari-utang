@@ -11,7 +11,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Customer (suki) list with balances, search by name or phone, add customers
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
-- Record payments (bayad): full or partial, never more than the utang, optional note
+- Record payments (bayad): full or partial, optional note. Paying more than the utang counts as paid in full and shows the sukli (change)
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
 - Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
 
@@ -121,10 +121,12 @@ Quantities can have up to 3 decimals. Each item's name, unit and price are copie
 
 Voiding: `POST /api/transactions/<id>/void` with an optional `{"reason": "maling quantity"}`. An utang can't be voided if that would make the balance negative (void the payment first).
 
-Recording a payment (amount in centavos, at most the customer's current utang):
+Recording a payment (amount in centavos = the cash received):
 
 ```json
-{"type": "payment", "customer_id": 1, "amount": 5000, "note": "GCash"}
+{"type": "payment", "customer_id": 1, "amount": 50000, "note": "GCash"}
 ```
+
+If the amount is more than the utang, only the utang is recorded as paid (balance becomes ₱0), the cash received is saved as `tendered`, and the response has the sukli: `{"change": 15000, ...}`.
 
 Amounts are in centavos (`1250` = ₱12.50).
