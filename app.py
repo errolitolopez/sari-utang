@@ -8,7 +8,7 @@ import os
 import re
 import secrets
 import time
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from functools import wraps
 
@@ -166,6 +166,99 @@ def find_customer(customer_id):
     ).fetchone()
 
 
+# --- Singilin (customers to collect from) -------------------------------------
+
+SETTINGS_FILE = os.path.join(app.root_path, "config", "settings.json")
+
+
+def load_settings():
+    """Read config/settings.json. Read every time, so edits show up on the next refresh.
+
+    overdue_days: an utang unpaid for this many days or more counts as "matagal".
+    """
+    with open(SETTINGS_FILE, encoding="utf8") as f:
+        settings = json.load(f)
+    days = settings.get("overdue_days") if isinstance(settings, dict) else None
+    if not isinstance(days, int) or isinstance(days, bool) or not 1 <= days <= 365:
+        raise ValueError(f'{SETTINGS_FILE} must look like {{"overdue_days": 30}} (1 to 365)')
+    return settings
+
+
+def collection_list():
+    """Everyone who owes, with how long their oldest unpaid utang has been waiting.
+
+    Payments pay off the oldest utang first. So for each customer we add up all
+    their payments, then go through their utang from oldest to newest, crossing
+    off each one the payments fully cover. The first one left is the oldest unpaid.
+    """
+    rows = db.get_db().execute(
+        """
+        SELECT t.customer_id, t.type, t.amount, t.date, c.name, c.phone
+        FROM transactions t
+        JOIN customers c ON c.id = t.customer_id
+        WHERE t.voided_at IS NULL
+        ORDER BY t.date, t.id
+        """
+    ).fetchall()
+
+    customers = {}  # customer id -> what we know about them
+    for row in rows:
+        c = customers.setdefault(row["customer_id"], {
+            "id": row["customer_id"], "name": row["name"], "phone": row["phone"],
+            "utang": [], "paid": 0, "last_payment": None,
+        })
+        if row["type"] == "utang":
+            c["utang"].append(row)
+        else:
+            c["paid"] += row["amount"]
+            c["last_payment"] = row["date"]  # rows are oldest first, so the last one wins
+
+    today = date.today()
+    result = []
+    for c in customers.values():
+        balance = sum(u["amount"] for u in c["utang"]) - c["paid"]
+        if balance <= 0:
+            continue
+
+        left_to_cover = c["paid"]
+        unpaid_since = None
+        for u in c["utang"]:
+            if left_to_cover >= u["amount"]:
+                left_to_cover -= u["amount"]  # fully paid
+            else:
+                unpaid_since = u["date"]  # oldest utang not fully paid yet
+                break
+
+        since_day = date.fromisoformat(unpaid_since[:10])  # "2026-10-10 10:15:22" -> 2026-10-10
+        result.append({
+            "id": c["id"],
+            "name": c["name"],
+            "phone": c["phone"],
+            "balance": balance,
+            "unpaid_since": unpaid_since,
+            "days": (today - since_day).days,
+            "last_payment": c["last_payment"],
+        })
+
+    result.sort(key=lambda c: (-c["days"], -c["balance"]))  # longest waiting first
+    return result
+
+
+@app.get("/singilin")
+@login_required_page
+def collect_page():
+    return render_template("collect.html")
+
+
+@app.get("/api/collect")
+@login_required_api
+def api_collect():
+    return jsonify(
+        customers=collection_list(),
+        overdue_days=load_settings()["overdue_days"],
+    )
+
+
 @app.get("/api/dashboard")
 @login_required_api
 def api_dashboard():
@@ -185,7 +278,12 @@ def api_dashboard():
         """
     ).fetchall()
 
+    overdue_days = load_settings()["overdue_days"]
+    overdue = [c for c in collection_list() if c["days"] >= overdue_days]
+
     return jsonify(
+        overdue_days=overdue_days,
+        overdue_count=len(overdue),
         total_outstanding=sum(row["balance"] for row in with_utang),
         customer_count=len(balances),
         customers_with_utang=len(with_utang),

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Singilin · Sari Utang{% endblock %}
+
+{% block content %}
+{% include "_navbar.html" %}
+
+<main class="container py-3">
+  <div id="collect-error" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- How long unpaid: filled in by collect.js -->
+  <div id="filters" class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="How long unpaid"></div>
+
+  <div class="card mb-2">
+    <div class="card-header d-flex justify-content-between">
+      <span class="fw-semibold">Singilin</span>
+      <span id="collect-summary" class="text-body-secondary small"></span>
+    </div>
+    <div id="collect-list" class="list-group list-group-flush">
+      <div class="list-group-item text-body-secondary">Loading...</div>
+    </div>
+  </div>
+  <p class="small text-body-secondary">
+    Days = how long the oldest unpaid utang has been waiting. Payments pay off the oldest utang first.
+  </p>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/collect.js') }}"></script>
+{% endblock %}

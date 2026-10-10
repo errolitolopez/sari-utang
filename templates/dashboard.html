@@ -36,6 +36,18 @@
     </div>
   </div>
 
+  <!-- Utang that has waited too long; links to the Singilin list -->
+  <a href="{{ url_for('collect_page') }}" id="overdue-card"
+     class="card text-decoration-none mb-3 border-warning">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div>
+        <div class="small text-body-secondary">Matagal na utang (<span id="overdue-days">30</span>+ araw)</div>
+        <div id="overdue-count" class="fs-4 fw-semibold">—</div>
+      </div>
+      <span class="text-body-secondary fs-4">›</span>
+    </div>
+  </a>
+
   <!-- Who owes the most -->
   <div class="card mb-3">
     <div class="card-header fw-semibold">Pinakamalaking utang</div>
