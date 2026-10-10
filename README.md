@@ -8,7 +8,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
-- Products import/export as CSV (opens in Excel / Google Sheets): export, edit prices, import back. New name + unit is added, same name + unit gets its price updated, nothing is deleted. All or nothing: a file with a bad row imports nothing and lists the rows to fix
+- Products import/export as Excel (.xlsx): export (with a unit dropdown), edit prices, import back. New name + unit is added, same name + unit gets its price updated, nothing is deleted. All or nothing: a file with a bad row imports nothing and lists the rows to fix
 - Customer (suki) list with balances, search by name or phone, add customers
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products, set quantities with − / + buttons or type them (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
@@ -122,8 +122,8 @@ instance/          database and secret key (private, not in git)
 | POST | `/api/login` | Log in with `{"pin": "1234"}` |
 | POST | `/api/logout` | Log out |
 | GET | `/api/dashboard` | Summary numbers for the dashboard (includes `overdue_count`) |
-| GET | `/products/export.csv` | All products as CSV (`name,price,unit`, price in pesos) |
-| POST | `/api/products/import` | Upload a CSV (`file`): adds new products, updates prices of existing ones |
+| GET | `/products/export.xlsx` | All products as Excel (`name`, `price` in pesos, `unit`) |
+| POST | `/api/products/import` | Upload an .xlsx (`file`): adds new products, updates prices of existing ones |
 | GET | `/customers/<id>/invoice.pdf` | One customer's invoice as PDF |
 | GET | `/singilin/invoices.zip?min_days=30` | ZIP of PDF invoices, one per customer with utang (optional `min_days` filter) |
 | GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
