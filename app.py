@@ -503,16 +503,19 @@ def api_customer_transactions(customer_id):
 
 
 def parse_quantity(value):
-    """A whole-number quantity (1, 2, 3...) as a Decimal, or None if it isn't valid.
+    """A quantity like 2 or 0.5 as a Decimal, or None if it isn't valid.
 
-    Decimal is used so price x quantity is computed exactly.
+    Up to 3 decimals are allowed (0.125 kg). Decimal is used instead of float so
+    0.1 + 0.2 is exactly 0.3 when computing amounts.
     """
-    # bool is a kind of int in Python, so rule it out (True would count as 1).
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    if not 1 <= value <= MAX_QUANTITY:
+    quantity = Decimal(str(value))
+    if not quantity.is_finite() or quantity <= 0 or quantity > MAX_QUANTITY:
         return None
-    return Decimal(value)
+    if quantity.as_tuple().exponent < -3:
+        return None
+    return quantity
 
 
 def line_amount(price, quantity):
@@ -531,7 +534,7 @@ def read_utang_item(raw, number):
 
     quantity = parse_quantity(raw.get("quantity"))
     if quantity is None:
-        return None, f"Item {number}: quantity must be a whole number from 1 to {MAX_QUANTITY}."
+        return None, f"Item {number}: quantity must be more than 0 (up to 3 decimals)."
 
     if raw.get("product_id") is not None:
         product_id = raw["product_id"]

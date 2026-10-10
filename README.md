@@ -10,7 +10,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Customer (suki) list with balances, search by name or phone, add customers
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
-- Add utang: pick products, set whole-number quantities with − / + buttons (e.g. 2 bottle, 3 kg), add items not in the list, optional note
+- Add utang: pick products, set quantities with − / + buttons or type them (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, optional note. Paying more than the utang counts as paid in full and shows the sukli (change)
 - Invoice per customer: every utang (items, qty × price) and bayad since they last owed nothing, summary by product, total, balance. Print / save as PDF, copy as text for Messenger/Viber, or send by SMS
 - Singilin list: everyone who owes, longest-waiting first, with filters (7+, 15+, 30+ days). "Matagal" (default 30 days) is set in [config/settings.json](#settings-configsettingsjson) and shown on the Dashboard
@@ -136,14 +136,14 @@ Adding an utang — the server computes every amount and the total from the prod
   "customer_id": 1,
   "items": [
     {"product_id": 3, "quantity": 2},
-    {"product_id": 5, "quantity": 3},
+    {"product_id": 5, "quantity": 0.5},
     {"name": "Yelo", "price": 500, "quantity": 1}
   ],
   "note": "for the party"
 }
 ```
 
-Quantities are whole numbers from 1 to 10,000. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old utang.
+Quantities can have up to 3 decimals. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old utang.
 
 Voiding: `POST /api/transactions/<id>/void` with an optional `{"reason": "maling quantity"}`. An utang can't be voided if that would make the balance negative (void the payment first).
 

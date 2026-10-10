@@ -101,7 +101,7 @@ CUSTOMERS = [
         (3, "payment", 50, None),  # partial
     ]),
     ("Lola Carmen", "0999 876 5432", [
-        (1, "utang", [("Asukal Puti", "kg", 1), ("Nescafe 3in1 Original", "sachet", 5)], None),
+        (1, "utang", [("Asukal Puti", "kg", 0.5), ("Nescafe 3in1 Original", "sachet", 5)], None),
     ]),
     ("Bong", None, [
         (40, "utang", [("Coke Mismo", "box", 2)], None),
