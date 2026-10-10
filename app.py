@@ -89,6 +89,12 @@ def login_required_api(view):
 
 # --- Pages -------------------------------------------------------------------
 
+@app.get("/favicon.ico")
+def favicon():
+    """Browsers ask for /favicon.ico by themselves; send the app icon."""
+    return app.send_static_file("icon.ico")
+
+
 @app.get("/")
 def index():
     return redirect(url_for("dashboard_page" if is_logged_in() else "login_page"))
