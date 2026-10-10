@@ -13,3 +13,6 @@ instance/
 
 # Database backups made by start.py
 backups/
+
+# Background mode log (start.py --background)
+logs/
