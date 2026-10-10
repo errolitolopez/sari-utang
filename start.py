@@ -46,8 +46,8 @@ INSTANCE_DIR = os.path.join(APP_DIR, "instance")  # the database, secret key, PI
 PID_FILE = os.path.join(INSTANCE_DIR, "server.pid")  # which process to stop
 LOCAL_URL = f"http://127.0.0.1:{PORT}"
 UPDATE_CHECK_HOURS = 6
-RESTART_EXIT_CODE = 3  # tells run.bat to start the app again (after an update)
 RESTARTED = "SARI_UTANG_RESTARTED"  # set when the app restarted itself after an update
+server = None  # the running Waitress server, so a restart can let go of the port
 
 
 def notify(message):
@@ -146,14 +146,20 @@ def restart(background):
     """Start again with the newly pulled code."""
     print("Restarting with the new version...")
     env = dict(os.environ, **{RESTARTED: "1"})
+    command = [sys.executable] + sys.argv
     if os.name != "nt":
-        os.execve(sys.executable, [sys.executable] + sys.argv, env)  # replace this process
-    if not background:
-        os._exit(RESTART_EXIT_CODE)  # run.bat sees this and starts the app again
-    # Background on Windows: start a new copy without a window, then end this one.
-    subprocess.Popen([sys.executable] + sys.argv, cwd=APP_DIR, env=env,
-                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    os._exit(0)
+        os.execve(sys.executable, command, env)  # replace this process with the new code
+    if server is not None:
+        server.close()  # let go of the port so the new copy can use it
+    if background:
+        # No window: start the new copy, then end this one.
+        subprocess.Popen(command, cwd=APP_DIR, env=env,
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        os._exit(0)
+    # With a window (run.bat): run the new copy in the same window and wait for it.
+    # Restarting from run.bat instead would be unsafe: Windows reads a .bat file while
+    # running it, and the update may have just changed run.bat.
+    os._exit(subprocess.call(command, cwd=APP_DIR, env=env))
 
 
 def keep_updating(background):
@@ -196,7 +202,7 @@ def main():
         restart(args.background)  # run the code that was just pulled
 
     import db
-    from waitress import serve
+    from waitress.server import create_server
 
     from app import app
 
@@ -244,7 +250,9 @@ def main():
         threading.Timer(1.5, webbrowser.open, [LOCAL_URL]).start()  # after the server is up
     threading.Thread(target=keep_updating, args=(args.background,), daemon=True).start()
     try:
-        serve(app, host="0.0.0.0", port=PORT, threads=4)
+        global server
+        server = create_server(app, host="0.0.0.0", port=PORT, threads=4)
+        server.run()
     finally:
         remove_pid_file()
 

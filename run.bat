@@ -4,41 +4,20 @@ rem The first time it sets everything up (needs internet once to download packag
 title Sari Utang
 cd /d "%~dp0"
 
-rem 1. Python virtual environment (only the first time)
-if not exist ".venv\Scripts\python.exe" (
-    echo Setting up Sari Utang for the first time...
-    py -3 -m venv .venv 2>nul || python -m venv .venv 2>nul
-)
-if not exist ".venv\Scripts\python.exe" (
-    echo.
-    echo Python is not installed.
-    echo Install it from https://www.python.org/downloads/
-    echo and tick "Add python.exe to PATH" on the first screen of the installer.
-    echo.
+rem 1-2. Python environment and packages
+call windows\setup.bat
+if errorlevel 1 (
     pause
     exit /b 1
 )
 
-rem 2. Packages (only when requirements.txt changed, so it also works offline)
-fc /b requirements.txt .venv\installed-requirements.txt >nul 2>nul
-if errorlevel 1 (
-    echo Installing packages...
-    ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt
-    if errorlevel 1 (
-        echo.
-        echo Could not install the packages. Connect to the internet and try again.
-        echo.
-        pause
-        exit /b 1
-    )
-    copy /y requirements.txt .venv\installed-requirements.txt >nul
+rem 3. Start (update, database, PIN, backup, server).
+rem Kept in one ( ) block: Windows reads the whole block before running it, so an
+rem auto-update that changes this file while the app runs can't confuse it.
+(
+    ".venv\Scripts\python.exe" start.py
+    echo.
+    echo Sari Utang stopped.
+    pause
+    exit /b
 )
-
-rem 3. Start (update, database, PIN, backup, server)
-:start
-".venv\Scripts\python.exe" start.py
-rem Exit code 3 = the app updated itself from GitHub and wants to start again
-if %errorlevel%==3 goto start
-echo.
-echo Sari Utang stopped.
-pause
