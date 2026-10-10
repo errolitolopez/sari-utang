@@ -147,7 +147,7 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-// --- Import from CSV ---------------------------------------------------------
+// --- Import from Excel (.xlsx) ----------------------------------------------
 
 const importModalElement = document.getElementById("import-modal");
 const importModal = bootstrap.Modal.getOrCreateInstance(importModalElement);
@@ -184,7 +184,7 @@ document.getElementById("import-form").addEventListener("submit", async (event) 
   event.preventDefault();
   importErrors.classList.add("d-none");
   if (!importFile.files.length) {
-    showImportErrors(["Choose a CSV file."], 1);
+    showImportErrors(["Choose an Excel (.xlsx) file."], 1);
     return;
   }
 

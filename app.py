@@ -3,9 +3,8 @@
 Run with: flask --app app run --debug
 """
 
-import json
-import csv
 import io
+import json
 import os
 import re
 import secrets
@@ -19,6 +18,9 @@ from functools import wraps
 from flask import (
     Flask, abort, jsonify, redirect, render_template, request, send_file, session, url_for,
 )
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
+from openpyxl.worksheet.datavalidation import DataValidation
 from werkzeug.security import check_password_hash
 
 import db
@@ -34,7 +36,7 @@ app.config["DATABASE"] = os.path.join(app.instance_path, "sari_utang.db")
 # Stay logged in for 30 days so the PIN isn't asked every time.
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# Largest upload accepted (e.g. a products CSV). Bigger requests get "413 Too Large".
+# Largest upload accepted (e.g. a products Excel file). Bigger requests get "413 Too Large".
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2 MB
 
 
@@ -903,98 +905,144 @@ def invoices_zip_download():
     )
 
 
-# --- Products import / export (CSV) --------------------------------------------
+# --- Products import / export (Excel .xlsx) ------------------------------------
 
-CSV_COLUMNS = ["name", "price", "unit"]
+COLUMNS = ["name", "price", "unit"]
 MAX_IMPORT_ROWS = 5000
 
 
-@app.get("/products/export.csv")
+@app.get("/products/export.xlsx")
 @login_required_page
 def products_export():
-    """All products as a CSV file: name, price (in pesos, e.g. 20.00), unit."""
+    """All products as an Excel file: name, price (in pesos), unit.
+
+    The unit column has a dropdown with the units from config/units.json.
+    """
     rows = db.get_db().execute(
         "SELECT name, price, unit FROM products ORDER BY name COLLATE NOCASE, price"
     ).fetchall()
-    text = io.StringIO()
-    writer = csv.writer(text)
-    writer.writerow(CSV_COLUMNS)
+    units = list(load_units())
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Products"
+    sheet.append(COLUMNS)
+    for cell in sheet[1]:
+        cell.font = Font(bold=True)
     for row in rows:
-        writer.writerow([row["name"], f"{row['price'] / 100:.2f}", row["unit"]])
-    # utf-8-sig adds a small marker at the start so Excel shows ₱ and ñ correctly.
-    data = io.BytesIO(text.getvalue().encode("utf-8-sig"))
+        sheet.append([row["name"], row["price"] / 100, row["unit"]])
+    last_row = max(sheet.max_row, 2)
+    for (price_cell,) in sheet.iter_rows(min_row=2, min_col=2, max_col=2):
+        price_cell.number_format = "#,##0.00"
+    sheet.freeze_panes = "A2"  # header stays visible when scrolling
+    sheet.column_dimensions["A"].width = 32
+    sheet.column_dimensions["B"].width = 12
+    sheet.column_dimensions["C"].width = 12
+
+    # The units go on a second sheet; the unit cells get a dropdown that lists them.
+    unit_sheet = workbook.create_sheet("Units")
+    for unit in units:
+        unit_sheet.append([unit])
+    dropdown = DataValidation(
+        type="list", formula1=f"Units!$A$1:$A${len(units)}", allow_blank=False,
+        showErrorMessage=True, errorTitle="Unit", error="Choose a unit from the list.",
+    )
+    sheet.add_data_validation(dropdown)
+    dropdown.add(f"C2:C{last_row + 500}")  # also for rows added later
+
+    data = io.BytesIO()
+    workbook.save(data)
+    data.seek(0)
     return send_file(
-        data, mimetype="text/csv", as_attachment=True,
-        download_name=f"products-{date.today().isoformat()}.csv",
+        data, as_attachment=True, download_name=f"products-{date.today().isoformat()}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 
-def parse_csv_price(text, decimal_comma=False):
-    """ "20", "20.50", "₱1,234.50" -> centavos, or None if it isn't a valid price.
+def parse_import_price(value):
+    """A price cell -> centavos, or None if it isn't valid.
 
-    decimal_comma: files saved with ";" usually write prices as "1.234,50"
-    (comma for decimals), so swap the two before reading the number.
+    Excel usually gives a number (20.5). A cell typed as text can look like
+    "20", "20.50" or "₱1,234.50".
     """
-    cleaned = text.replace("₱", "").replace("P", "").strip()
-    if decimal_comma:
-        cleaned = cleaned.replace(".", "").replace(",", ".")
-    else:
-        cleaned = cleaned.replace(",", "")
-    if not re.fullmatch(r"\d+(\.\d{1,2})?", cleaned):
+    if isinstance(value, bool) or value is None:
         return None
-    centavos = int((Decimal(cleaned) * 100).to_integral_value())
+    if isinstance(value, (int, float)):
+        amount = Decimal(str(value))
+    else:
+        cleaned = str(value).replace("₱", "").replace("P", "").replace(",", "").strip()
+        if not re.fullmatch(r"\d+(\.\d+)?", cleaned):
+            return None
+        amount = Decimal(cleaned)
+    if not amount.is_finite() or amount.as_tuple().exponent < -2:
+        return None  # more than 2 decimals, e.g. 20.555
+    centavos = int(amount * 100)
     return centavos if 0 < centavos <= MAX_PRICE else None
 
 
-def read_products_csv(raw_bytes):
-    """Check every row of an uploaded products CSV. Returns (products, errors).
+def cell_text(value):
+    """A cell as text: None -> "", 555 (a number) -> "555", 12.0 -> "12"."""
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return str(value)
+
+
+def read_products_excel(raw_bytes):
+    """Check every row of an uploaded Excel file. Returns (products, errors).
 
     Nothing is saved here; if errors is not empty, the import is cancelled.
     """
     try:
-        text = raw_bytes.decode("utf-8-sig")  # also removes Excel's marker, if any
-    except UnicodeDecodeError:
-        return [], ["The file is not a UTF-8 CSV. In Excel, use Save As → CSV UTF-8."]
+        # read_only: reads row by row; data_only: formulas give their result
+        workbook = load_workbook(io.BytesIO(raw_bytes), read_only=True, data_only=True)
+    except Exception:
+        return [], ["This is not an Excel .xlsx file. In Excel, use Save As → Excel Workbook (.xlsx)."]
 
-    # Some spreadsheets save with ";" instead of ",".
-    first_line = text.splitlines()[0] if text.strip() else ""
-    delimiter = ";" if first_line.count(";") > first_line.count(",") else ","
-    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+    try:
+        sheet = workbook["Products"] if "Products" in workbook.sheetnames else workbook.worksheets[0]
+        rows = sheet.iter_rows(values_only=True)
+        header = [cell_text(h).strip().lower() for h in next(rows, ())][:3]
+        if header != COLUMNS:
+            return [], [f"The first row must be: {', '.join(COLUMNS)}"]
 
-    header = [h.strip().lower() for h in next(reader, [])]
-    if header[:3] != CSV_COLUMNS:
-        return [], [f"The first row must be: {', '.join(CSV_COLUMNS)}"]
+        units = load_units()
+        units_lower = {u.lower(): u for u in units}  # "KG" in the file -> "kg"
+        products, errors, seen = [], [], set()
+        for line_number, row in enumerate(rows, start=2):
+            row = (tuple(row) + (None, None, None))[:3]
+            if all(cell_text(cell).strip() == "" for cell in row):
+                continue  # skip empty rows
+            if len(products) + len(errors) >= MAX_IMPORT_ROWS:
+                errors.append(f"Too many rows (max {MAX_IMPORT_ROWS}).")
+                break
+            name = " ".join(cell_text(row[0]).split())
+            price = parse_import_price(row[1])
+            unit = units_lower.get(cell_text(row[2]).strip().lower())
 
-    units = load_units()
-    units_lower = {u.lower(): u for u in units}  # "KG" in the file -> "kg"
-    products, errors, seen = [], [], set()
-    for line_number, row in enumerate(reader, start=2):
-        if not any(cell.strip() for cell in row):
-            continue  # skip empty lines
-        if len(products) + len(errors) >= MAX_IMPORT_ROWS:
-            errors.append(f"Too many rows (max {MAX_IMPORT_ROWS}).")
-            break
-        row = (row + ["", "", ""])[:3]
-        name = " ".join(row[0].split())
-        price = parse_csv_price(row[1], decimal_comma=(delimiter == ";"))
-        unit = units_lower.get(row[2].strip().lower())
+            problems = []
+            if not name or len(name) > 100:
+                problems.append("name is required (max 100 characters)")
+            if cell_text(row[1]).strip() == "":
+                problems.append("price is empty")
+            elif price is None:
+                problems.append(f'price "{cell_text(row[1])}" is not valid (e.g. 20 or 20.50, max 100,000)')
+            if cell_text(row[2]).strip() == "":
+                problems.append("unit is empty")
+            elif unit is None:
+                problems.append(f'unit "{cell_text(row[2])}" is not in config/units.json')
+            key = (name.lower(), unit)
+            if not problems and key in seen:
+                problems.append(f"{name} per {unit} is already in the file above")
+            seen.add(key)
 
-        problems = []
-        if not name or len(name) > 100:
-            problems.append("name is required (max 100 characters)")
-        if price is None:
-            problems.append(f'price "{row[1].strip()}" is not valid (e.g. 20 or 20.50, max 100,000)')
-        if unit is None:
-            problems.append(f'unit "{row[2].strip()}" is not in config/units.json')
-        key = (name.lower(), unit)
-        if not problems and key in seen:
-            problems.append(f"{name} per {unit} is already in the file above")
-        seen.add(key)
-
-        if problems:
-            errors.append(f"Row {line_number}: " + "; ".join(problems))
-        else:
-            products.append({"name": name, "price": price, "unit": unit})
+            if problems:
+                errors.append(f"Row {line_number}: " + "; ".join(problems))
+            else:
+                products.append({"name": name, "price": price, "unit": unit})
+    finally:
+        workbook.close()
 
     if not products and not errors:
         errors.append("The file has no products.")
@@ -1011,9 +1059,9 @@ def api_import_products():
     """
     upload = request.files.get("file")
     if upload is None or not upload.filename:
-        return jsonify(errors=["Choose a CSV file."]), 400
+        return jsonify(errors=["Choose an Excel (.xlsx) file."]), 400
 
-    products, errors = read_products_csv(upload.read())
+    products, errors = read_products_excel(upload.read())
     if errors:
         return jsonify(errors=errors[:20], error_count=len(errors)), 400
 
