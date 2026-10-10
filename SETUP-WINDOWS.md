@@ -85,11 +85,19 @@ Pagkatapos ma-set ang PIN sa `run.bat`, **isara na ang window na iyon** at gamit
 - **Para ibalik ang backup:** ihinto ang Sari Utang (**Stop Sari Utang**) → kopyahin ang napiling file mula sa `backups` papunta sa
   `instance\sari_utang.db` (palitan ang luma) → patakbuhin ulit ang `run.bat`.
 
-### Pag-update ng app sa susunod
+### Pag-update ng app (automatic)
 
-Kopyahin ang bagong files sa `C:\SariUtang` at palitan ang luma, **pero huwag galawin** ang:
-- `instance\` (dito ang listahan ng utang at PIN)
-- `backups\`
-- `config\` (kung binago ninyo ang pangalan ng tindahan o units)
+Kung na-install gamit ang `git clone`, **kusa itong nag-a-update**:
+- tuwing magsisimula ang app, at
+- bawat 6 na oras habang tumatakbo,
 
-Ihinto muna ang app (**Stop Sari Utang**), tapos patakbuhin ang `run.bat` isang beses; kusa itong mag-a-update ng database at packages.
+kinukuha nito ang bagong version mula sa GitHub at nagre-restart nang mag-isa. Kung may bagong packages, kusa ring ini-install.
+Hindi nagagalaw ang listahan ng utang (`instance\`) at `backups\`.
+
+Hindi mag-a-update (at tuloy lang ang lumang version) kung:
+- **walang internet** — susubukan ulit sa susunod;
+- **may binagong file sa folder** na binago rin sa bagong version (hal. `config\settings.json`).
+  Makikita ito sa `logs\sari-utang.log`. Para ayusin: `git checkout config\settings.json`, tapos ilagay ulit ang pangalan ng tindahan.
+
+Para patayin ang auto-update: sa `config\settings.json`, gawing `"auto_update": false`.
+Para mag-update nang manual: `git pull`, tapos **Stop Sari Utang** → **Sari Utang**.

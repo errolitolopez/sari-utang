@@ -32,7 +32,7 @@ Requires Python 3.10+.
 - **Windows:** see [SETUP-WINDOWS.md](SETUP-WINDOWS.md) — `run.bat` the first time (sets the PIN), then `create-shortcuts.bat` for Desktop icons that run it in the background (no window).
 - **Linux/Mac:** `pip install -r requirements.txt` in a virtual environment, then `python start.py`.
 
-`start.py` (`--background` = no window, logs to `logs/`; `--open` = open the browser; `--stop` = stop it) updates the database, asks for a PIN the first time, backs up the database to `backups/` (last 30 kept), and serves the app with Waitress on port 5000 for phones on the same Wi-Fi.
+`start.py` (`--background` = no window, logs to `logs/`; `--open` = open the browser; `--stop` = stop it) auto-updates from GitHub (`updater.py`: `git pull --ff-only` at start and every 6 hours, then restarts itself; skipped if offline or files were edited locally; off with `"auto_update": false`), updates the database, asks for a PIN the first time, backs up the database to `backups/` (last 30 kept), and serves the app with Waitress on port 5000 for phones on the same Wi-Fi.
 
 ### Quick start (development)
 
@@ -99,11 +99,13 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 ```json
 {
   "store_name": "Sari-Sari Store",
-  "overdue_days": 30
+  "overdue_days": 30,
+  "auto_update": true
 }
 ```
 
 - `store_name`: shown at the top of invoices.
+- `auto_update` (true/false): pull the newest version from GitHub at start and every 6 hours (only for copies installed with `git clone`).
 - `overdue_days` (1 to 365): an utang unpaid this many days or more counts as "matagal". Those customers are red in the Singilin list and counted on the Dashboard. Edit and refresh, no restart needed.
 
 ## Project structure
@@ -111,6 +113,7 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 ```
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
+updater.py         auto-update from GitHub (git pull --ff-only), used by start.py
 start.py           everyday start: database, PIN, backup, Waitress server
 run.bat            Windows: first-time setup / start with a window
 create-shortcuts.bat  Windows: Desktop icons "Sari Utang" (background + browser) and "Stop Sari Utang"
