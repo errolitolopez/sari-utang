@@ -12,6 +12,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, optional note. Paying more than the utang counts as paid in full and shows the sukli (change)
+- Singilin list: everyone who owes, longest-waiting first, with filters (7+, 15+, 30+ days). "Matagal" (default 30 days) is set in [config/settings.json](#settings-configsettingsjson) and shown on the Dashboard
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
 - Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
 
@@ -74,6 +75,16 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 - The **first** unit is the default for new products.
 - Removing a unit is safe: products that use it keep it, and can still be edited.
 
+### Settings (`config/settings.json`)
+
+```json
+{
+  "overdue_days": 30
+}
+```
+
+- `overdue_days` (1 to 365): an utang unpaid this many days or more counts as "matagal". Those customers are red in the Singilin list and counted on the Dashboard. Edit and refresh, no restart needed.
+
 ## Project structure
 
 ```
@@ -81,6 +92,7 @@ app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
 schema.sql         tables: settings, customers, transactions, transaction_items, products
 config/units.json  units for products (editable)
+config/settings.json  settings like overdue_days (editable)
 templates/         HTML pages (Bootstrap)
 static/js/         page scripts (fetch the API)
 instance/          database and secret key (private, not in git)
@@ -92,7 +104,8 @@ instance/          database and secret key (private, not in git)
 |--------|-------|---------|
 | POST | `/api/login` | Log in with `{"pin": "1234"}` |
 | POST | `/api/logout` | Log out |
-| GET | `/api/dashboard` | Summary numbers for the dashboard |
+| GET | `/api/dashboard` | Summary numbers for the dashboard (includes `overdue_count`) |
+| GET | `/api/collect` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
 | GET | `/api/customers` | All customers with their balances |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
 | GET | `/api/products` | All products |
