@@ -7,23 +7,61 @@ at bubuksan ito sa phone gamit ang parehong Wi-Fi.
 
 ---
 
-## 1. I-install ang Python (isang beses lang)
+## 1. I-install ang Python at Git (isang beses lang)
 
+**Python**
 1. Buksan ang <https://www.python.org/downloads/> at i-download ang **Python 3** (yung malaking dilaw na button).
 2. Patakbuhin ang installer. Sa unang screen, **i-check ang "Add python.exe to PATH"** ✅, tapos **Install Now**.
 
+**Git**
+1. Buksan ang <https://git-scm.com/download/win> at i-download ang **Git for Windows**.
+2. Patakbuhin ang installer. Puwedeng **Next** lang nang Next (okay ang mga default).
+
 > Kailangan ng internet dito at sa unang takbo ng app. Pagkatapos noon, gumagana na kahit walang internet
-> (maliban sa unang beses na bubuksan sa bawat phone, para ma-download ang itsura ng app).
+> (internet lang ang kailangan para sa auto-update, at sa unang beses na bubuksan sa bawat phone).
 
-## 2. Kopyahin ang app
+## 2. Kunin ang app mula sa GitHub
 
-1. Mula sa USB, kopyahin ang **`sari-utang-windows.zip`** sa computer.
-2. Right-click → **Extract All…** → ilagay sa **`C:\SariUtang`** (o sa Documents).
-   Huwag patakbuhin mula sa loob ng ZIP o mula sa USB.
+Private ang repository, kaya bibigyan natin ang laptop ng **deploy key**: susi na puwedeng
+**magbasa lang ng repository na ito** (hindi makaka-push, hindi makikita ang ibang repo).
+Huwag mag-login ng sariling GitHub account sa laptop.
+
+**2a. Gumawa ng susi sa laptop.** Buksan ang **Command Prompt** (Start → i-type `cmd`) at patakbuhin:
+
+```bat
+ssh-keygen -t ed25519 -C "sari-utang store laptop"
+```
+
+Pindutin lang ang **Enter** sa lahat ng tanong (walang passphrase — kailangan ito para gumana ang auto-update nang walang tanong).
+Tapos ipakita ang public key:
+
+```bat
+type %USERPROFILE%\.ssh\id_ed25519.pub
+```
+
+Kopyahin ang buong linyang lumabas (nagsisimula sa `ssh-ed25519 …`).
+
+**2b. Idagdag sa GitHub** (gamit ang account mo, kahit sa ibang computer o phone):
+1. Buksan ang <https://github.com/errolitolopez/sari-utang/settings/keys> (**Settings → Deploy keys**).
+2. **Add deploy key** → Title: `Store laptop` → i-paste ang key.
+3. **Huwag i-check** ang *Allow write access* → **Add key**.
+
+**2c. I-download ang app** sa Command Prompt ng laptop:
+
+```bat
+cd C:\
+git clone git@github.com:errolitolopez/sari-utang.git SariUtang
+```
+
+Kapag tinanong ng *"Are you sure you want to continue connecting (yes/no)?"*, i-type ang **`yes`**.
+Ang app ay nasa **`C:\SariUtang`** na.
+
+> Kapag ginawang public ang repository sa hinaharap, hindi na kailangan ang deploy key:
+> `git clone https://github.com/errolitolopez/sari-utang.git SariUtang`
 
 ## 3. Patakbuhin (unang beses)
 
-1. Sa folder, i-double-click ang **`run.bat`**.
+1. Buksan ang folder na **`C:\SariUtang`** at i-double-click ang **`run.bat`**.
    - Kung lumabas ang *"Windows protected your PC"*: **More info → Run anyway**.
 2. Maghintay habang nag-iinstall (unang beses lang, 1–2 minuto).
 3. Itatanong ang **PIN** (4 hanggang 6 na numero). Ilagay ang PIN ng ate mo.
@@ -37,6 +75,9 @@ at bubuksan ito sa phone gamit ang parehong Wi-Fi.
      On this computer:  http://127.0.0.1:5000
      On your phone:     http://192.168.1.17:5000
    ```
+
+6. Ilagay ang pangalan ng tindahan: buksan ang **`C:\SariUtang\config\settings.json`** sa Notepad
+   (nagagawa ito sa unang takbo), palitan ang `"Sari-Sari Store"`, at i-save.
 
 ## 4. Buksan sa phone
 
@@ -87,20 +128,31 @@ Pagkatapos ma-set ang PIN sa `run.bat`, **isara na ang window na iyon** at gamit
 
 ### Pag-update ng app (automatic)
 
-Kung na-install gamit ang `git clone`, **kusa itong nag-a-update**:
+**Kusa itong nag-a-update** — walang kailangang gawin sa laptop:
 - tuwing magsisimula ang app, at
 - bawat 6 na oras habang tumatakbo,
 
-kinukuha nito ang bagong version mula sa GitHub at nagre-restart nang mag-isa. Kung may bagong packages, kusa ring ini-install.
-Hindi nagagalaw ang listahan ng utang (`instance\`) at `backups\`.
+kinukuha nito ang bagong version mula sa GitHub (`git pull`) at nagre-restart nang mag-isa.
+Kung may bagong packages, kusa ring ini-install. Hindi nagagalaw ang listahan ng utang (`instance\`) at `backups\`.
 
 Hindi mag-a-update (at tuloy lang ang lumang version) kung:
 - **walang internet** — susubukan ulit sa susunod;
+- **natanggal o binago ang deploy key** sa GitHub — gawin ulit ang step 2a–2b;
 - **may binagong file ng app mismo** (hal. `app.py`) na binago rin sa bagong version.
-  Makikita ito sa `logs\sari-utang.log`. Para ayusin: `git checkout .` sa folder ng app.
+  Para ayusin: sa Command Prompt, `cd C:\SariUtang` tapos `git checkout .`
+
+Makikita ang dahilan sa `logs\sari-utang.log`.
 
 > Ligtas baguhin ang `config\settings.json` at `config\units.json`: kopya ito ng tindahan
 > (ginagawa sa unang takbo mula sa `*.example.json`), kaya hindi nito napipigilan ang update.
 
+**Manual na pag-update** (kung ayaw maghintay):
+
+```bat
+cd C:\SariUtang
+git pull
+```
+
+Tapos **Stop Sari Utang** → **Sari Utang**.
+
 Para patayin ang auto-update: sa `config\settings.json`, gawing `"auto_update": false`.
-Para mag-update nang manual: `git pull`, tapos **Stop Sari Utang** → **Sari Utang**.
