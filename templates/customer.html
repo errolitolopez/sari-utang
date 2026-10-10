@@ -35,7 +35,7 @@
 
   <div class="card">
     <div class="card-header fw-semibold">History</div>
-    <ul id="history" class="list-group list-group-flush"></ul>
+    <div id="history" class="list-group list-group-flush"></div>
   </div>
 </main>
 
@@ -134,6 +134,37 @@
         <button id="save-payment-button" type="submit" class="btn btn-success">Save bayad</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Details of one history entry (view only) -->
+<div class="modal fade" id="details-modal" tabindex="-1" aria-labelledby="details-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title fs-5" id="details-title"></h2>
+          <div id="details-date" class="small text-body-secondary"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="details-voided" class="alert alert-danger py-2 d-none" role="status"></div>
+        <ul id="details-items" class="list-group mb-3"></ul>
+        <div class="d-flex justify-content-between fs-5 fw-bold">
+          <span>Total</span>
+          <span id="details-total"></span>
+        </div>
+        <div id="details-note" class="mt-3 d-none">
+          <div class="small text-body-secondary">Note</div>
+          <div id="details-note-text" class="fst-italic"></div>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button id="details-void-button" type="button" class="btn btn-outline-danger">Void</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
   </div>
 </div>
 

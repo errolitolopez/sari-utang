@@ -73,10 +73,15 @@ function describeTransaction(transaction) {
   return transaction.type === "utang" ? "Utang" : "Bayad";
 }
 
+// One line per entry in the history. Tap it to see the details.
 function historyItem(transaction) {
   const isUtang = transaction.type === "utang";
   const isVoided = transaction.voided_at !== null;
-  const li = makeElement("li", `list-group-item ${isVoided ? "bg-body-tertiary" : ""}`);
+  const row = makeElement(
+    "button",
+    `list-group-item list-group-item-action ${isVoided ? "bg-body-tertiary" : ""}`
+  );
+  row.type = "button";
 
   // Voided entries are crossed out and greyed, so it's clear they don't count.
   const body = makeElement("div", isVoided ? "text-decoration-line-through text-body-secondary" : "");
@@ -89,29 +94,83 @@ function historyItem(transaction) {
       (isUtang ? "+" : "−") + formatAmount(transaction.amount)
     )
   );
-  body.append(top, makeElement("div", "", describeTransaction(transaction)));
-  if (transaction.note) {
-    body.append(makeElement("div", "small text-body-secondary fst-italic", transaction.note));
-  }
-  li.append(body);
+  const bottom = makeElement("div", "d-flex justify-content-between align-items-center gap-2");
+  bottom.append(
+    makeElement("span", "text-truncate", describeTransaction(transaction)),
+    makeElement("span", "text-body-secondary", "›")
+  );
+  body.append(top, bottom);
+  row.append(body);
 
   if (isVoided) {
-    const voided = makeElement("div", "small text-danger mt-1");
-    voided.append(makeElement("span", "badge text-bg-danger me-1", "VOIDED"));
-    voided.append(
-      document.createTextNode(
-        [transaction.voided_at, transaction.void_reason].filter(Boolean).join(" · ")
-      )
-    );
-    li.append(voided);
-  } else {
-    const voidButton = makeElement("button", "btn btn-link btn-sm text-danger p-0 mt-1", "Void");
-    voidButton.type = "button";
-    voidButton.addEventListener("click", () => openVoidForm(transaction));
-    li.append(voidButton);
+    row.append(makeElement("span", "badge text-bg-danger mt-1", "VOIDED"));
   }
+  row.addEventListener("click", () => openDetails(transaction));
+  return row;
+}
+
+// --- Details (view only) -----------------------------------------------------
+
+const detailsModalElement = document.getElementById("details-modal");
+const detailsModal = bootstrap.Modal.getOrCreateInstance(detailsModalElement);
+let detailsTransaction = null; // the entry shown in the details popup
+
+// One item: "Coke Mismo" / "2 bottle × ₱20.00" on the left, the amount on the right.
+function detailsItem(item) {
+  const li = makeElement("li", "list-group-item d-flex justify-content-between align-items-center");
+  const left = makeElement("div");
+  const quantity = item.unit ? `${item.quantity} ${item.unit}` : `${item.quantity}`;
+  left.append(
+    makeElement("div", "", item.name),
+    makeElement("div", "small text-body-secondary", `${quantity} × ${formatAmount(item.price)}`)
+  );
+  li.append(left, makeElement("span", "fw-semibold", formatAmount(item.amount)));
   return li;
 }
+
+function openDetails(transaction) {
+  detailsTransaction = transaction;
+  const isUtang = transaction.type === "utang";
+  const isVoided = transaction.voided_at !== null;
+
+  document.getElementById("details-title").textContent = isUtang ? "Utang" : "Bayad";
+  document.getElementById("details-date").textContent = transaction.date;
+
+  const voided = document.getElementById("details-voided");
+  voided.classList.toggle("d-none", !isVoided);
+  if (isVoided) {
+    voided.textContent = ["VOIDED " + transaction.voided_at, transaction.void_reason]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  const items = document.getElementById("details-items");
+  items.replaceChildren(...transaction.items.map(detailsItem));
+  items.classList.toggle("d-none", transaction.items.length === 0);
+
+  const total = document.getElementById("details-total");
+  total.textContent = (isUtang ? "+" : "−") + formatAmount(transaction.amount);
+  total.className = isVoided
+    ? "text-decoration-line-through text-body-secondary"
+    : isUtang ? "text-danger" : "text-success";
+
+  document.getElementById("details-note").classList.toggle("d-none", !transaction.note);
+  document.getElementById("details-note-text").textContent = transaction.note || "";
+
+  // Already voided entries can't be voided again.
+  document.getElementById("details-void-button").classList.toggle("d-none", isVoided);
+  detailsModal.show();
+}
+
+// Void from the details: close the details first, then open the void popup.
+document.getElementById("details-void-button").addEventListener("click", () => {
+  detailsModalElement.addEventListener(
+    "hidden.bs.modal",
+    () => openVoidForm(detailsTransaction),
+    { once: true }
+  );
+  detailsModal.hide();
+});
 
 async function loadCustomer() {
   try {
@@ -127,7 +186,7 @@ async function loadCustomer() {
     history.replaceChildren(
       ...(data.transactions.length
         ? data.transactions.map(historyItem)
-        : [makeElement("li", "list-group-item text-body-secondary", "No utang yet.")])
+        : [makeElement("div", "list-group-item text-body-secondary", "No utang yet.")])
     );
   } catch {
     showError("customer-error", "Cannot reach the server. Check your connection.");
