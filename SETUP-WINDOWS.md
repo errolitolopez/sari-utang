@@ -22,42 +22,14 @@ at bubuksan ito sa phone gamit ang parehong Wi-Fi.
 
 ## 2. Kunin ang app mula sa GitHub
 
-Private ang repository, kaya bibigyan natin ang laptop ng **deploy key**: susi na puwedeng
-**magbasa lang ng repository na ito** (hindi makaka-push, hindi makikita ang ibang repo).
-Huwag mag-login ng sariling GitHub account sa laptop.
-
-**2a. Gumawa ng susi sa laptop.** Buksan ang **Command Prompt** (Start → i-type `cmd`) at patakbuhin:
-
-```bat
-ssh-keygen -t ed25519 -C "sari-utang store laptop"
-```
-
-Pindutin lang ang **Enter** sa lahat ng tanong (walang passphrase — kailangan ito para gumana ang auto-update nang walang tanong).
-Tapos ipakita ang public key:
-
-```bat
-type %USERPROFILE%\.ssh\id_ed25519.pub
-```
-
-Kopyahin ang buong linyang lumabas (nagsisimula sa `ssh-ed25519 …`).
-
-**2b. Idagdag sa GitHub** (gamit ang account mo, kahit sa ibang computer o phone):
-1. Buksan ang <https://github.com/errolitolopez/sari-utang/settings/keys> (**Settings → Deploy keys**).
-2. **Add deploy key** → Title: `Store laptop` → i-paste ang key.
-3. **Huwag i-check** ang *Allow write access* → **Add key**.
-
-**2c. I-download ang app** sa Command Prompt ng laptop:
+Buksan ang **Command Prompt** (Start → i-type `cmd`) at patakbuhin:
 
 ```bat
 cd C:\
-git clone git@github.com:errolitolopez/sari-utang.git SariUtang
+git clone https://github.com/errolitolopez/sari-utang.git SariUtang
 ```
 
-Kapag tinanong ng *"Are you sure you want to continue connecting (yes/no)?"*, i-type ang **`yes`**.
-Ang app ay nasa **`C:\SariUtang`** na.
-
-> Kapag ginawang public ang repository sa hinaharap, hindi na kailangan ang deploy key:
-> `git clone https://github.com/errolitolopez/sari-utang.git SariUtang`
+Ang app ay nasa **`C:\SariUtang`** na. Hindi kailangan ng GitHub account sa laptop (public ang repository).
 
 ## 3. Patakbuhin (unang beses)
 
@@ -137,7 +109,6 @@ Kung may bagong packages, kusa ring ini-install. Hindi nagagalaw ang listahan ng
 
 Hindi mag-a-update (at tuloy lang ang lumang version) kung:
 - **walang internet** — susubukan ulit sa susunod;
-- **natanggal o binago ang deploy key** sa GitHub — gawin ulit ang step 2a–2b;
 - **may binagong file ng app mismo** (hal. `app.py`) na binago rin sa bagong version.
   Para ayusin: sa Command Prompt, `cd C:\SariUtang` tapos `git checkout .`
 
