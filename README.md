@@ -9,12 +9,12 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Customer (suki) list with balances, search by name or phone, add customers
+- Customer page: balance and full history; tap a customer to open it
+- Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Product list with price per unit (pc, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit
 
 ### Planned
 
-- Customer history page
-- Record utang entries per customer (items, amount, date)
 - Record payments, full or partial
 
 ## Getting started
@@ -76,7 +76,7 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 ```
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
-schema.sql         tables: settings, customers, transactions, products
+schema.sql         tables: settings, customers, transactions, transaction_items, products
 config/units.json  units for products (editable)
 templates/         HTML pages (Bootstrap)
 static/js/         page scripts (fetch the API)
@@ -95,5 +95,24 @@ instance/          database and secret key (private, not in git)
 | GET | `/api/products` | All products |
 | POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000, "unit": "bottle"}` |
 | PUT | `/api/products/<id>` | Change a product's name, price or unit (same body as POST) |
+| GET | `/api/customers/<id>/transactions` | One customer with their balance and history (with items) |
+| POST | `/api/transactions` | Add an utang (see below) |
+
+Adding an utang — the server computes every amount and the total from the product prices:
+
+```json
+{
+  "type": "utang",
+  "customer_id": 1,
+  "items": [
+    {"product_id": 3, "quantity": 2},
+    {"product_id": 5, "quantity": 0.5},
+    {"name": "Yelo", "price": 500, "quantity": 1}
+  ],
+  "note": "for the party"
+}
+```
+
+Quantities can have up to 3 decimals. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old utang.
 
 Amounts are in centavos (`1250` = ₱12.50).
