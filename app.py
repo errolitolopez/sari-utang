@@ -16,6 +16,7 @@ from flask import Flask, abort, jsonify, redirect, render_template, request, ses
 from werkzeug.security import check_password_hash
 
 import db
+import seed
 
 app = Flask(__name__, instance_relative_config=True)
 
@@ -40,6 +41,7 @@ def load_secret_key():
 
 app.secret_key = load_secret_key()
 db.init_app(app)
+app.cli.add_command(seed.seed_command)
 
 
 # --- Login protection --------------------------------------------------------

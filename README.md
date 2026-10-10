@@ -53,6 +53,15 @@ flask --app app run --debug
 
 Open http://127.0.0.1:5000 and log in with your PIN.
 
+### Sample data (for trying it out)
+
+```bash
+flask --app app seed                  # ~50 common sari-sari products + 8 customers with utang/payments
+flask --app app seed --products-only  # only the products
+```
+
+The database is backed up first (`instance/sari_utang.backup-<date>.db`). Running it again skips products and customers that already exist. To start clean, stop the app, delete `instance/sari_utang.db` and run `./run.sh`.
+
 To open it from a phone on the same Wi-Fi, use `./run.sh phone` (or `flask --app app run --host 0.0.0.0`, never with `--debug`) and visit `http://<your-computer-ip>:5000`.
 
 ## Configuration
@@ -90,6 +99,7 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 ```
 app.py             routes: pages and /api endpoints
 db.py              database connection + init-db / set-pin commands
+seed.py            sample products, customers, utang and payments (flask --app app seed)
 schema.sql         tables: settings, customers, transactions, transaction_items, products
 config/units.json  units for products (editable)
 config/settings.json  settings like overdue_days (editable)
