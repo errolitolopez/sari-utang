@@ -9,9 +9,10 @@ import re
 import secrets
 import time
 from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from functools import wraps
 
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 import db
@@ -99,6 +100,14 @@ def customers_page():
     return render_template("customers.html")
 
 
+@app.get("/customers/<int:customer_id>")
+@login_required_page
+def customer_page(customer_id):
+    if find_customer(customer_id) is None:
+        abort(404)
+    return render_template("customer.html", customer_id=customer_id)
+
+
 # --- API ---------------------------------------------------------------------
 
 @app.post("/api/login")
@@ -135,19 +144,25 @@ def api_logout():
     return jsonify(ok=True)
 
 
+BALANCES_SQL = """
+    SELECT c.id, c.name, c.phone,
+           COALESCE(SUM(CASE WHEN t.type = 'utang' THEN t.amount ELSE -t.amount END), 0)
+               AS balance
+    FROM customers c
+    LEFT JOIN transactions t ON t.customer_id = c.id
+"""
+
+
 def customer_balances(order_by):
     """All customers with their balance (total utang - total payments, in centavos)."""
+    return db.get_db().execute(f"{BALANCES_SQL} GROUP BY c.id ORDER BY {order_by}").fetchall()
+
+
+def find_customer(customer_id):
+    """One customer with their balance, or None if there is no such customer."""
     return db.get_db().execute(
-        f"""
-        SELECT c.id, c.name, c.phone,
-               COALESCE(SUM(CASE WHEN t.type = 'utang' THEN t.amount ELSE -t.amount END), 0)
-                   AS balance
-        FROM customers c
-        LEFT JOIN transactions t ON t.customer_id = c.id
-        GROUP BY c.id
-        ORDER BY {order_by}
-        """
-    ).fetchall()
+        f"{BALANCES_SQL} WHERE c.id = ? GROUP BY c.id", (customer_id,)
+    ).fetchone()
 
 
 @app.get("/api/dashboard")
@@ -160,7 +175,7 @@ def api_dashboard():
 
     recent = conn.execute(
         """
-        SELECT t.id, t.type, t.amount, t.note, t.date, c.name AS customer_name
+        SELECT t.id, t.type, t.amount, t.note, t.date, t.customer_id, c.name AS customer_name
         FROM transactions t
         JOIN customers c ON c.id = t.customer_id
         ORDER BY t.date DESC, t.id DESC
@@ -325,3 +340,174 @@ def api_update_product(product_id):
     )
     conn.commit()
     return jsonify(product={"id": product_id, **product})
+
+
+# --- Customer history and utang ----------------------------------------------
+
+MAX_ITEMS = 50
+MAX_QUANTITY = Decimal("10000")
+MAX_UTANG_TOTAL = 1_000_000_00  # P1,000,000.00 in centavos
+
+
+@app.get("/api/customers/<int:customer_id>/transactions")
+@login_required_api
+def api_customer_transactions(customer_id):
+    customer = find_customer(customer_id)
+    if customer is None:
+        return jsonify(error="Customer not found."), 404
+
+    conn = db.get_db()
+    transactions = [
+        dict(row, items=[])
+        for row in conn.execute(
+            """
+            SELECT id, type, amount, note, date FROM transactions
+            WHERE customer_id = ?
+            ORDER BY date DESC, id DESC
+            """,
+            (customer_id,),
+        )
+    ]
+
+    # Put each item under its transaction.
+    by_id = {t["id"]: t for t in transactions}
+    items = conn.execute(
+        """
+        SELECT i.transaction_id, i.product_id, i.name, i.unit, i.price, i.quantity, i.amount
+        FROM transaction_items i
+        JOIN transactions t ON t.id = i.transaction_id
+        WHERE t.customer_id = ?
+        ORDER BY i.id
+        """,
+        (customer_id,),
+    )
+    for item in items:
+        by_id[item["transaction_id"]]["items"].append(dict(item))
+
+    return jsonify(customer=dict(customer), transactions=transactions)
+
+
+def parse_quantity(value):
+    """A quantity like 2 or 0.5 as a Decimal, or None if it isn't valid.
+
+    Up to 3 decimals are allowed (0.125 kg). Decimal is used instead of float so
+    0.1 + 0.2 is exactly 0.3 when computing amounts.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    quantity = Decimal(str(value))
+    if not quantity.is_finite() or quantity <= 0 or quantity > MAX_QUANTITY:
+        return None
+    if quantity.as_tuple().exponent < -3:
+        return None
+    return quantity
+
+
+def line_amount(price, quantity):
+    """price (centavos) x quantity, rounded to the nearest centavo (.5 rounds up)."""
+    return int((price * quantity).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def read_utang_item(raw, number):
+    """Check one item of an utang. Returns (item, error).
+
+    An item is either a product from the list: {"product_id": 3, "quantity": 2}
+    or typed in by hand:                        {"name": "Yelo", "price": 500, "quantity": 1}
+    """
+    if not isinstance(raw, dict):
+        return None, f"Item {number} is not valid."
+
+    quantity = parse_quantity(raw.get("quantity"))
+    if quantity is None:
+        return None, f"Item {number}: quantity must be more than 0 (up to 3 decimals)."
+
+    if raw.get("product_id") is not None:
+        product_id = raw["product_id"]
+        product = None
+        if isinstance(product_id, int) and not isinstance(product_id, bool):
+            product = db.get_db().execute(
+                "SELECT id, name, unit, price FROM products WHERE id = ?", (product_id,)
+            ).fetchone()
+        if product is None:
+            return None, f"Item {number}: product not found. Refresh the page and try again."
+        name, unit, price = product["name"], product["unit"], product["price"]
+    else:
+        product_id, unit = None, None
+        name = " ".join(str(raw.get("name", "")).split())
+        price = raw.get("price")
+        if not name or len(name) > 100:
+            return None, f"Item {number}: name is required (max 100 characters)."
+        if not isinstance(price, int) or isinstance(price, bool) or not 0 < price <= MAX_PRICE:
+            return None, f"Item {number}: price must be more than P0 (max P100,000)."
+
+    amount = line_amount(price, quantity)
+    if amount <= 0:
+        return None, f"Item {number}: quantity is too small, the amount would be P0."
+
+    item = {
+        "product_id": product_id,
+        "name": name,
+        "unit": unit,
+        "price": price,
+        "quantity": float(quantity),
+        "amount": amount,
+    }
+    return item, None
+
+
+@app.post("/api/transactions")
+@login_required_api
+def api_add_transaction():
+    data = request.get_json(silent=True) or {}
+
+    if data.get("type") != "utang":
+        return jsonify(error="Only utang can be added for now."), 400
+
+    customer_id = data.get("customer_id")
+    if (
+        not isinstance(customer_id, int)
+        or isinstance(customer_id, bool)
+        or find_customer(customer_id) is None
+    ):
+        return jsonify(error="Customer not found."), 404
+
+    raw_items = data.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        return jsonify(error="Add at least one item."), 400
+    if len(raw_items) > MAX_ITEMS:
+        return jsonify(error=f"Too many items (max {MAX_ITEMS})."), 400
+
+    note = " ".join(str(data.get("note") or "").split())
+    if len(note) > 200:
+        return jsonify(error="Note is too long (max 200 characters)."), 400
+
+    # Check every item first, so nothing is saved if one of them is wrong.
+    items = []
+    for number, raw in enumerate(raw_items, start=1):
+        item, error = read_utang_item(raw, number)
+        if error:
+            return jsonify(error=error), 400
+        items.append(item)
+
+    # The total is always computed here, never taken from the page.
+    total = sum(item["amount"] for item in items)
+    if total > MAX_UTANG_TOTAL:
+        return jsonify(error="Total is too high (max P1,000,000)."), 400
+
+    conn = db.get_db()
+    cursor = conn.execute(
+        "INSERT INTO transactions (customer_id, type, amount, note) VALUES (?, 'utang', ?, ?)",
+        (customer_id, total, note or None),
+    )
+    transaction_id = cursor.lastrowid
+    conn.executemany(
+        """
+        INSERT INTO transaction_items
+            (transaction_id, product_id, name, unit, price, quantity, amount)
+        VALUES (:transaction_id, :product_id, :name, :unit, :price, :quantity, :amount)
+        """,
+        [{**item, "transaction_id": transaction_id} for item in items],
+    )
+    conn.commit()  # the transaction and its items are saved together
+
+    return jsonify(transaction={"id": transaction_id, "amount": total, "items": items}), 201

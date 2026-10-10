@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Customer · Sari Utang{% endblock %}
+
+{% block content %}
+{% include "_navbar.html" %}
+
+<main class="container py-3" id="customer-page" data-customer-id="{{ customer_id }}">
+  <a href="{{ url_for('customers_page') }}" class="btn btn-link px-0 mb-2">← Customers</a>
+
+  <div id="customer-error" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- Name, phone and balance -->
+  <div class="card mb-3">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div>
+        <h1 id="customer-name" class="h4 mb-0">Loading...</h1>
+        <div id="customer-phone" class="text-body-secondary small"></div>
+      </div>
+      <div class="text-end">
+        <div class="small text-body-secondary">Utang</div>
+        <div id="customer-balance" class="fs-3 fw-bold">—</div>
+      </div>
+    </div>
+  </div>
+
+  <button id="add-utang-button" class="btn btn-danger btn-lg w-100 mb-3">+ Utang</button>
+
+  <div class="card">
+    <div class="card-header fw-semibold">History</div>
+    <ul id="history" class="list-group list-group-flush"></ul>
+  </div>
+</main>
+
+<!-- Add utang form: full screen on phones -->
+<div class="modal fade" id="utang-modal" tabindex="-1" aria-labelledby="utang-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
+    <form id="utang-form" class="modal-content" novalidate>
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="utang-modal-title">Utang</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Pick from the product list -->
+        <label for="product-search" class="form-label fw-semibold">Add product</label>
+        <input id="product-search" type="search" class="form-control" placeholder="Search products"
+               autocomplete="off">
+        <div id="product-results" class="list-group mt-1 mb-3"></div>
+
+        <!-- Item not in the product list -->
+        <details class="mb-3">
+          <summary class="text-primary">Item not in the list?</summary>
+          <div class="row g-2 mt-1">
+            <div class="col-7">
+              <input id="other-name" class="form-control" placeholder="Item name" maxlength="100" aria-label="Item name">
+            </div>
+            <div class="col-5">
+              <div class="input-group">
+                <span class="input-group-text">₱</span>
+                <input id="other-price" class="form-control" inputmode="decimal" placeholder="0.00" aria-label="Item price">
+              </div>
+            </div>
+            <div class="col-12">
+              <button id="add-other-button" type="button" class="btn btn-outline-primary btn-sm w-100">Add item</button>
+            </div>
+          </div>
+        </details>
+
+        <!-- Items in this utang -->
+        <div class="fw-semibold mb-1">Items</div>
+        <ul id="utang-lines" class="list-group mb-3"></ul>
+
+        <label for="utang-note" class="form-label">Note <span class="text-body-secondary">(optional)</span></label>
+        <input id="utang-note" class="form-control mb-3" maxlength="200" autocomplete="off">
+
+        <div id="utang-error" class="alert alert-danger py-2 mb-0 d-none" role="alert"></div>
+      </div>
+
+      <div class="modal-footer justify-content-between">
+        <div>
+          <div class="small text-body-secondary">Total</div>
+          <div id="utang-total" class="fs-4 fw-bold">₱0.00</div>
+        </div>
+        <button id="save-utang-button" type="submit" class="btn btn-danger btn-lg">Save utang</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/customer.js') }}"></script>
+{% endblock %}

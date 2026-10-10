@@ -32,3 +32,17 @@ CREATE TABLE IF NOT EXISTS products (
     price INTEGER NOT NULL CHECK (price > 0),
     unit  TEXT NOT NULL DEFAULT 'pc'
 );
+
+-- What was bought in each utang. Name, unit and price are copied from the product
+-- at that moment, so changing a product's price later doesn't change old utang.
+-- product_id is empty for items typed in by hand ("other item").
+CREATE TABLE IF NOT EXISTS transaction_items (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    transaction_id INTEGER NOT NULL REFERENCES transactions (id),
+    product_id     INTEGER REFERENCES products (id),
+    name           TEXT NOT NULL,
+    unit           TEXT,
+    price          INTEGER NOT NULL CHECK (price > 0),
+    quantity       REAL NOT NULL CHECK (quantity > 0),
+    amount         INTEGER NOT NULL CHECK (amount > 0)
+);
