@@ -11,11 +11,12 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Customer (suki) list with balances, search by name or phone, add customers
 - Customer page: balance and full history; tap a customer to open it
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
+- Record payments (bayad): full or partial, never more than the utang, optional note
 - Product list with price per unit (pc, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit
 
 ### Planned
 
-- Record payments, full or partial
+- Void an utang or payment entered by mistake
 
 ## Getting started
 
@@ -96,7 +97,7 @@ instance/          database and secret key (private, not in git)
 | POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000, "unit": "bottle"}` |
 | PUT | `/api/products/<id>` | Change a product's name, price or unit (same body as POST) |
 | GET | `/api/customers/<id>/transactions` | One customer with their balance and history (with items) |
-| POST | `/api/transactions` | Add an utang (see below) |
+| POST | `/api/transactions` | Add an utang or a payment (see below) |
 
 Adding an utang — the server computes every amount and the total from the product prices:
 
@@ -114,5 +115,11 @@ Adding an utang — the server computes every amount and the total from the prod
 ```
 
 Quantities can have up to 3 decimals. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old utang.
+
+Recording a payment (amount in centavos, at most the customer's current utang):
+
+```json
+{"type": "payment", "customer_id": 1, "amount": 5000, "note": "GCash"}
+```
 
 Amounts are in centavos (`1250` = ₱12.50).
