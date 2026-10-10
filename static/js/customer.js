@@ -25,12 +25,14 @@ function parsePrice(text) {
   return Math.round(Number(cleaned) * 100);
 }
 
-// "0.5" -> 0.5, or null if it is not a valid quantity (more than 0, up to 3 decimals).
+const MAX_QUANTITY = 10000; // same limit as the server
+
+// "3" -> 3, or null if it is not a whole number from 1 to MAX_QUANTITY.
 function parseQuantity(text) {
   const cleaned = String(text).trim();
-  if (!/^\d+(\.\d{1,3})?$/.test(cleaned)) return null;
+  if (!/^\d+$/.test(cleaned)) return null;
   const quantity = Number(cleaned);
-  return quantity > 0 ? quantity : null;
+  return quantity >= 1 && quantity <= MAX_QUANTITY ? quantity : null;
 }
 
 // Preview only; the server computes the real amounts when saving.
@@ -38,7 +40,7 @@ function lineAmount(line) {
   return Math.round(line.price * line.quantity);
 }
 
-// "2 pc Coke Mismo", "0.5 kg Bigas", "1 × Yelo" (typed-in items have no unit)
+// "2 pc Coke Mismo", "3 kg Bigas", "1 × Yelo" (typed-in items have no unit)
 function describeItem(item) {
   return item.unit
     ? `${item.quantity} ${item.unit} ${item.name}`
@@ -67,7 +69,7 @@ function renderCustomer(customer) {
   document.getElementById("add-payment-button").disabled = balance <= 0;
 }
 
-// What an entry is about: "2 bottle Coke Mismo, 0.5 kg Bigas" or "Bayad".
+// What an entry is about: "2 bottle Coke Mismo, 3 kg Bigas" or "Bayad".
 function describeTransaction(transaction) {
   if (transaction.items.length) return transaction.items.map(describeItem).join(", ");
   return transaction.type === "utang" ? "Utang" : "Bayad";
@@ -238,7 +240,7 @@ function renderResults() {
 function addProduct(product) {
   const existing = lines.find((line) => line.productId === product.id);
   if (existing) {
-    existing.quantity = Number((existing.quantity + 1).toFixed(3));
+    existing.quantity = Math.min((existing.quantity || 0) + 1, MAX_QUANTITY);
   } else {
     lines.push({
       productId: product.id,
@@ -299,23 +301,51 @@ function lineItem(line, index) {
   });
   top.append(info, remove);
 
+  // − [ 2 ] + : whole numbers only, at least 1.
   const bottom = makeElement("div", "d-flex justify-content-between align-items-center mt-2");
   const group = makeElement("div", "input-group input-group-sm");
-  group.style.maxWidth = "160px";
-  const quantityInput = makeElement("input", "form-control");
-  quantityInput.inputMode = "decimal";
+  group.style.maxWidth = "190px";
+
+  const minus = makeElement("button", "btn btn-outline-secondary", "−");
+  minus.type = "button";
+  minus.setAttribute("aria-label", `Less ${line.name}`);
+  const quantityInput = makeElement("input", "form-control text-center");
+  quantityInput.inputMode = "numeric"; // number keypad without a decimal point
   quantityInput.value = line.quantity;
   quantityInput.setAttribute("aria-label", `Quantity of ${line.name}`);
-  group.append(quantityInput, makeElement("span", "input-group-text", line.unit || "×"));
+  const plus = makeElement("button", "btn btn-outline-secondary", "+");
+  plus.type = "button";
+  plus.setAttribute("aria-label", `More ${line.name}`);
+  group.append(minus, quantityInput, plus, makeElement("span", "input-group-text", line.unit || "×"));
 
-  const amount = makeElement("span", "fw-semibold", formatAmount(lineAmount(line)));
-  quantityInput.addEventListener("input", () => {
-    line.quantity = parseQuantity(quantityInput.value);
-    quantityInput.classList.toggle("is-invalid", line.quantity === null);
-    amount.textContent = line.quantity === null ? "—" : formatAmount(lineAmount(line));
+  const amount = makeElement("span", "fw-semibold");
+
+  // Shows the quantity's amount, marks a wrong quantity red, and updates the total.
+  function refresh() {
+    const valid = line.quantity !== null;
+    quantityInput.classList.toggle("is-invalid", !valid);
+    amount.textContent = valid ? formatAmount(lineAmount(line)) : "—";
+    minus.disabled = !valid || line.quantity <= 1;
+    plus.disabled = valid && line.quantity >= MAX_QUANTITY;
     renderTotal();
+  }
+
+  function setQuantity(quantity) {
+    line.quantity = quantity;
+    quantityInput.value = quantity;
+    refresh();
+  }
+
+  minus.addEventListener("click", () => setQuantity(Math.max((line.quantity || 1) - 1, 1)));
+  plus.addEventListener("click", () => setQuantity(Math.min((line.quantity || 0) + 1, MAX_QUANTITY)));
+  quantityInput.addEventListener("input", () => {
+    quantityInput.value = quantityInput.value.replace(/\D/g, ""); // digits only
+    line.quantity = parseQuantity(quantityInput.value);
+    refresh();
   });
+
   bottom.append(group, amount);
+  refresh();
 
   li.append(top, bottom);
   return li;
@@ -360,7 +390,7 @@ document.getElementById("utang-form").addEventListener("submit", async (event) =
     return;
   }
   if (lines.some((line) => line.quantity === null)) {
-    showError("utang-error", "Fix the quantities marked in red (e.g. 2 or 0.5).");
+    showError("utang-error", "Fix the quantities marked in red (whole numbers, 1 or more).");
     return;
   }
 
