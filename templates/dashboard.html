@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · Sari Utang{% endblock %}
+
+{% block content %}
+<nav class="navbar bg-primary" data-bs-theme="dark">
+  <div class="container">
+    <span class="navbar-brand">Sari Utang</span>
+    <button id="logout-button" class="btn btn-outline-light btn-sm">Logout</button>
+  </div>
+</nav>
+
+<main class="container py-3">
+  <div id="dashboard-error" class="alert alert-danger d-none" role="alert"></div>
+
+  <!-- Summary numbers -->
+  <div class="row g-2 mb-3">
+    <div class="col-12">
+      <div class="card text-bg-danger">
+        <div class="card-body">
+          <div class="small">Total utang</div>
+          <div id="total-outstanding" class="fs-2 fw-bold">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="small text-body-secondary">May utang</div>
+          <div id="customers-with-utang" class="fs-4 fw-semibold">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="card">
+        <div class="card-body">
+          <div class="small text-body-secondary">Customers</div>
+          <div id="customer-count" class="fs-4 fw-semibold">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Who owes the most -->
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Pinakamalaking utang</div>
+    <ul id="top-balances" class="list-group list-group-flush"></ul>
+  </div>
+
+  <!-- Latest utang and payments -->
+  <div class="card">
+    <div class="card-header fw-semibold">Recent transactions</div>
+    <ul id="recent-transactions" class="list-group list-group-flush"></ul>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

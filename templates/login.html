@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Login · Sari Utang{% endblock %}
+
+{% block content %}
+<main class="container d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow-sm w-100" style="max-width: 360px;">
+    <div class="card-body p-4">
+      <h1 class="h4 text-center mb-1">Sari Utang</h1>
+      <p class="text-center text-body-secondary mb-4">Enter your PIN</p>
+
+      <form id="login-form" novalidate>
+        <input id="pin" type="password" class="form-control form-control-lg text-center mb-3"
+               inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6"
+               autocomplete="current-password" placeholder="••••" aria-label="PIN" required autofocus>
+        <div id="login-error" class="alert alert-danger py-2 d-none" role="alert"></div>
+        <button id="login-button" type="submit" class="btn btn-primary btn-lg w-100">Login</button>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+{% endblock %}
