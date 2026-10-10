@@ -157,6 +157,27 @@ def api_logout():
     return jsonify(ok=True)
 
 
+def like_pattern(text):
+    """Search text -> a LIKE pattern that finds it anywhere ("coke" -> "%coke%").
+
+    In LIKE, % and _ are wildcards; they are escaped so searching "50%" finds "50%".
+    Use with: ... LIKE ? ESCAPE '\\'
+    """
+    text = " ".join(text.split())
+    return "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+MAX_PER_PAGE = 100
+
+
+def page_numbers(total, page, per_page):
+    """Fix page / per_page from the address bar. Returns (page, per_page, pages, offset)."""
+    per_page = min(max(per_page, 1), MAX_PER_PAGE)
+    pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), pages)  # e.g. page 9 of 3 -> page 3
+    return page, per_page, pages, (page - 1) * per_page
+
+
 # Voided transactions are left out of every balance.
 BALANCES_SQL = """
     SELECT c.id, c.name, c.phone,
@@ -314,8 +335,38 @@ def api_dashboard():
 @app.get("/api/customers")
 @login_required_api
 def api_list_customers():
-    rows = customer_balances(order_by="c.name COLLATE NOCASE")
-    return jsonify(customers=[dict(row) for row in rows])
+    """Customers with their balance, highest utang first (then A-Z).
+
+    Without ?page= : all customers.
+    With ?page=2&per_page=20&q=nena : one page of the customers whose name or phone has "nena".
+    """
+    order = "balance DESC, c.name COLLATE NOCASE"
+    page = request.args.get("page", type=int)
+    if page is None:
+        return jsonify(customers=[dict(row) for row in customer_balances(order_by=order)])
+
+    conn = db.get_db()
+    pattern = like_pattern(request.args.get("q", ""))
+    where = "WHERE (c.name LIKE ? ESCAPE '\\' OR c.phone LIKE ? ESCAPE '\\')"
+    total = conn.execute(f"SELECT COUNT(*) FROM customers c {where}", (pattern, pattern)).fetchone()[0]
+    page, per_page, pages, offset = page_numbers(
+        total, page, request.args.get("per_page", default=20, type=int)
+    )
+    rows = conn.execute(
+        f"{BALANCES_SQL} {where} GROUP BY c.id ORDER BY {order} LIMIT ? OFFSET ?",
+        (pattern, pattern, per_page, offset),
+    ).fetchall()
+
+    # For the "10 total · 7 may utang" line (all customers, not just this search).
+    all_count = conn.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+    with_utang = conn.execute(
+        f"SELECT COUNT(*) FROM ({BALANCES_SQL} GROUP BY c.id HAVING balance > 0)"
+    ).fetchone()[0]
+    return jsonify(
+        customers=[dict(row) for row in rows],
+        page=page, per_page=per_page, pages=pages, total=total,
+        all_count=all_count, with_utang_count=with_utang,
+    )
 
 
 @app.post("/api/customers")
@@ -419,9 +470,6 @@ def products_page():
     return render_template("products.html", units=load_units())
 
 
-MAX_PER_PAGE = 100
-
-
 @app.get("/api/products")
 @login_required_api
 def api_list_products():
@@ -438,19 +486,17 @@ def api_list_products():
         ).fetchall()
         return jsonify(products=[dict(row) for row in rows])
 
-    per_page = min(max(request.args.get("per_page", default=20, type=int), 1), MAX_PER_PAGE)
-    query = " ".join(request.args.get("q", "").split())
-    # In LIKE, % and _ are wildcards; escape them so searching "50%" finds "50%".
-    pattern = "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    pattern = like_pattern(request.args.get("q", ""))
     where = "WHERE name LIKE ? ESCAPE '\\'"
 
     total = conn.execute(f"SELECT COUNT(*) FROM products {where}", (pattern,)).fetchone()[0]
-    pages = max((total + per_page - 1) // per_page, 1)
-    page = min(max(page, 1), pages)  # e.g. page 9 of 3 -> page 3
+    page, per_page, pages, offset = page_numbers(
+        total, page, request.args.get("per_page", default=20, type=int)
+    )
     rows = conn.execute(
         f"SELECT id, name, price, unit FROM products {where} "
         "ORDER BY name COLLATE NOCASE, price LIMIT ? OFFSET ?",
-        (pattern, per_page, (page - 1) * per_page),
+        (pattern, per_page, offset),
     ).fetchall()
     all_count = conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
     return jsonify(

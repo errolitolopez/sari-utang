@@ -1,6 +1,10 @@
-// Customer list: loads all customers, filters them as you type, and adds new ones.
+// Customer list: highest utang first, one page at a time (search is done on the server),
+// and adds new ones.
 
-let customers = []; // everything from /api/customers, filtered on the page
+const PER_PAGE = 20;
+let page = 1; // the page being shown
+let pages = 1; // how many pages there are for the current search
+let loadNumber = 0; // only the newest request updates the list (typing fast sends several)
 
 const list = document.getElementById("customer-list");
 const searchInput = document.getElementById("search");
@@ -50,38 +54,53 @@ function messageItem(text) {
   return div;
 }
 
-function render() {
-  const query = searchInput.value.trim().toLowerCase();
-  const shown = customers.filter(
-    (c) => c.name.toLowerCase().includes(query) || (c.phone || "").includes(query)
-  );
-
-  if (customers.length === 0) {
+// Highest utang first; the server does the sorting, searching and paging.
+function render(data) {
+  if (data.all_count === 0) {
     list.replaceChildren(messageItem("No customers yet. Tap + Add to add one."));
-  } else if (shown.length === 0) {
+  } else if (data.customers.length === 0) {
     list.replaceChildren(messageItem("No customer matches your search."));
   } else {
-    list.replaceChildren(...shown.map(customerItem));
+    list.replaceChildren(...data.customers.map(customerItem));
   }
 
-  const withUtang = customers.filter((c) => c.balance > 0).length;
   document.getElementById("customer-summary").textContent =
-    `${customers.length} total · ${withUtang} may utang`;
+    searchInput.value.trim() !== ""
+      ? `${data.total} found`
+      : `${data.all_count} total · ${data.with_utang_count} may utang`;
+
+  // ‹ Prev · Page 2 of 3 · Next ›
+  page = data.page;
+  pages = data.pages;
+  document.getElementById("pager").classList.toggle("d-none", pages <= 1);
+  document.getElementById("page-info").textContent = `Page ${page} of ${pages}`;
+  document.getElementById("prev-page").disabled = page <= 1;
+  document.getElementById("next-page").disabled = page >= pages;
 }
 
+// Loads one page of customers from the server.
 async function loadCustomers() {
+  const thisLoad = ++loadNumber;
+  const query = encodeURIComponent(searchInput.value.trim());
   try {
-    const response = await apiFetch("/api/customers");
-    if (!response) return;
+    const response = await apiFetch(`/api/customers?page=${page}&per_page=${PER_PAGE}&q=${query}`);
+    if (!response || thisLoad !== loadNumber) return; // a newer search is on its way
     if (!response.ok) {
       showError("customers-error", "Could not load customers.");
       return;
     }
-    customers = (await response.json()).customers;
-    render();
-  } catch {
+    hideError("customers-error");
+    render(await response.json());
+  } catch (error) {
+    console.error(error);
     showError("customers-error", "Cannot reach the server. Check your connection.");
   }
+}
+
+function goToPage(newPage) {
+  page = newPage;
+  loadCustomers();
+  window.scrollTo({ top: 0 });
 }
 
 form.addEventListener("submit", async (event) => {
@@ -125,6 +144,17 @@ modalElement.addEventListener("show.bs.modal", () => {
 });
 modalElement.addEventListener("shown.bs.modal", () => nameInput.focus());
 
-searchInput.addEventListener("input", render);
+document.getElementById("prev-page").addEventListener("click", () => goToPage(page - 1));
+document.getElementById("next-page").addEventListener("click", () => goToPage(page + 1));
+
+// Search after a short pause in typing, starting again from page 1.
+let searchTimer = null;
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    page = 1;
+    loadCustomers();
+  }, 250);
+});
 
 loadCustomers();
