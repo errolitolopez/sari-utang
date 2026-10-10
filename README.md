@@ -12,11 +12,12 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Customer page: balance and full history; tap a customer to open it
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, never more than the utang, optional note
+- Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
 - Product list with price per unit (pc, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit
 
 ### Planned
 
-- Void an utang or payment entered by mistake
+- Put it online
 
 ## Getting started
 
@@ -98,6 +99,7 @@ instance/          database and secret key (private, not in git)
 | PUT | `/api/products/<id>` | Change a product's name, price or unit (same body as POST) |
 | GET | `/api/customers/<id>/transactions` | One customer with their balance and history (with items) |
 | POST | `/api/transactions` | Add an utang or a payment (see below) |
+| POST | `/api/transactions/<id>/void` | Void an utang or payment entered by mistake |
 
 Adding an utang — the server computes every amount and the total from the product prices:
 
@@ -115,6 +117,8 @@ Adding an utang — the server computes every amount and the total from the prod
 ```
 
 Quantities can have up to 3 decimals. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old utang.
+
+Voiding: `POST /api/transactions/<id>/void` with an optional `{"reason": "maling quantity"}`. An utang can't be voided if that would make the balance negative (void the payment first).
 
 Recording a payment (amount in centavos, at most the customer's current utang):
 
