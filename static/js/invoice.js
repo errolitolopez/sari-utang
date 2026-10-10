@@ -5,6 +5,12 @@ const copyMessage = document.getElementById("copy-message");
 
 document.getElementById("print-button").addEventListener("click", () => window.print());
 
+// "Summary by product" repeats the items, so it is only shown (and printed) when ticked.
+const summary = document.getElementById("product-summary");
+document.getElementById("show-summary").addEventListener("change", (event) => {
+  if (summary) summary.classList.toggle("d-none", !event.target.checked);
+});
+
 document.getElementById("copy-button").addEventListener("click", async () => {
   copyMessage.classList.add("d-none");
 
