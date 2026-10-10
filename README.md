@@ -118,8 +118,9 @@ db.py              database connection + init-db / set-pin commands
 updater.py         auto-update from GitHub (git pull --ff-only), used by start.py
 start.py           everyday start: database, PIN, backup, Waitress server
 run.bat            Windows: first-time setup / start with a window
+reinstall.bat      Windows: fresh app files + packages, keeps instance/, backups/, config/*.json
 create-shortcuts.bat  Windows: Desktop icons "Sari Utang" (background + browser) and "Stop Sari Utang"
-windows/           helper that makes the Windows shortcuts (also used by install-autostart.bat)
+windows/           helpers: make-shortcut.ps1 (shortcuts, auto-start), setup.bat (.venv + packages for run.bat / reinstall.bat)
 seed.py            sample products, customers, utang and payments (flask --app app seed)
 invoice_pdf.py     invoice PDFs (fpdf2), A6 receipt layout
 fonts/             DejaVu Sans font for PDFs (has the ₱ sign), with its license

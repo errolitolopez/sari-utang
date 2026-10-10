@@ -98,6 +98,19 @@ Pagkatapos ma-set ang PIN sa `run.bat`, **isara na ang window na iyon** at gamit
 - **Para ibalik ang backup:** ihinto ang Sari Utang (**Stop Sari Utang**) → kopyahin ang napiling file mula sa `backups` papunta sa
   `instance\sari_utang.db` (palitan ang luma) → patakbuhin ulit ang `run.bat`.
 
+### Reinstall (kung may sira, pero itatabi ang data)
+
+I-double-click ang **`reinstall.bat`** → **Y**. Ito ang gagawin:
+
+| Itatabi ✅ | Papalitan ♻️ |
+|---|---|
+| Listahan ng utang, customers, products, PIN (`instance\`) | Files ng app (bagong kopya mula sa GitHub) |
+| `backups\` (may dagdag na `backups\before-reinstall.db`) | Python packages (`.venv`, ini-install ulit) |
+| Pangalan ng tindahan at units (`config\settings.json`, `units.json`) | |
+| Desktop icons at auto-start | |
+
+Pagkatapos, kusa itong magsisimula at bubuksan sa browser. Kailangan ng internet.
+
 ### Pag-update ng app (automatic)
 
 **Kusa itong nag-a-update** — walang kailangang gawin sa laptop:
