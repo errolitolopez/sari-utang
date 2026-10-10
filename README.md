@@ -9,7 +9,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Customer (suki) list with balances, search by name or phone, add customers
-- Product list with prices: search, add, tap a product to edit its name or price
+- Product list with price per unit (pc, pack, sachet, bottle, can, kg, g, L, ml, oz): search, add, tap to edit
 
 ### Planned
 
@@ -73,7 +73,7 @@ instance/          database and secret key (private, not in git)
 | GET | `/api/customers` | All customers with their balances |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
 | GET | `/api/products` | All products |
-| POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000}` |
-| PUT | `/api/products/<id>` | Change a product's name or price (same body as POST) |
+| POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000, "unit": "bottle"}` |
+| PUT | `/api/products/<id>` | Change a product's name, price or unit (same body as POST) |
 
 Amounts are in centavos (`1250` = ₱12.50).
