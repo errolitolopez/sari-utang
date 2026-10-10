@@ -17,7 +17,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Batch export: on the Singilin page, download a ZIP with one PDF invoice per customer (file name = customer name, e.g. `Aling Nena.pdf`), following the selected filter
 - Singilin list: everyone who owes, longest-waiting first, with filters (7+, 15+, 30+ days). "Matagal" (default 30 days) is set in [config/settings.json](#settings-configsettingsjson) and shown on the Dashboard
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
-- Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
+- Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): paged (20 per page), search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
 
 ### Planned
 
@@ -129,7 +129,7 @@ instance/          database and secret key (private, not in git)
 | GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
 | GET | `/api/customers` | All customers with their balances |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
-| GET | `/api/products` | All products |
+| GET | `/api/products` | All products, or one page with `?page=1&per_page=20&q=coke` (returns `page`, `pages`, `total`) |
 | POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000, "unit": "bottle"}` |
 | PUT | `/api/products/<id>` | Change a product's name, price or unit (same body as POST) |
 | GET | `/api/customers/<id>/transactions` | One customer with their balance and history (with items) |
