@@ -9,7 +9,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Customer (suki) list with balances, search by name or phone, add customers
-- Customer page: balance and full history; tap a customer to open it
+- Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, never more than the utang, optional note
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
