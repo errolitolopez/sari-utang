@@ -13,7 +13,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - Add utang: pick products and quantities (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, never more than the utang, optional note
 - Void an utang or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
-- Product list with price per unit (pc, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit
+- Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
 
 ### Planned
 
@@ -63,6 +63,7 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 ```json
 {
   "pc": "pc (piraso)",
+  "box": "box",
   "kg": "kg (kilo)",
   "tali": "tali (bundle)"
 }
