@@ -212,3 +212,81 @@ def api_add_customer():
     conn.commit()
     customer = {"id": cursor.lastrowid, "name": name, "phone": phone or None, "balance": 0}
     return jsonify(customer=customer), 201
+
+
+# --- Products ----------------------------------------------------------------
+
+MAX_PRICE = 100_000_00  # P100,000.00 in centavos, catches typos like an extra zero
+
+
+def read_product_form():
+    """Check the name and price sent by the page. Returns (name, price, error)."""
+    data = request.get_json(silent=True) or {}
+    name = " ".join(str(data.get("name", "")).split())
+    price = data.get("price")
+
+    if not name:
+        return None, None, "Name is required."
+    if len(name) > 100:
+        return None, None, "Name is too long (max 100 characters)."
+    # bool is a kind of int in Python, so rule it out (True would count as 1).
+    if not isinstance(price, int) or isinstance(price, bool) or price <= 0:
+        return None, None, "Price must be more than P0."
+    if price > MAX_PRICE:
+        return None, None, "Price is too high (max P100,000)."
+    return name, price, None
+
+
+def product_name_taken(name, except_id=None):
+    row = db.get_db().execute(
+        "SELECT id FROM products WHERE name = ? COLLATE NOCASE", (name,)
+    ).fetchone()
+    return row is not None and row["id"] != except_id
+
+
+@app.get("/products")
+@login_required_page
+def products_page():
+    return render_template("products.html")
+
+
+@app.get("/api/products")
+@login_required_api
+def api_list_products():
+    rows = db.get_db().execute(
+        "SELECT id, name, price FROM products ORDER BY name COLLATE NOCASE"
+    ).fetchall()
+    return jsonify(products=[dict(row) for row in rows])
+
+
+@app.post("/api/products")
+@login_required_api
+def api_add_product():
+    name, price, error = read_product_form()
+    if error:
+        return jsonify(error=error), 400
+    if product_name_taken(name):
+        return jsonify(error=f"{name} is already in the list."), 409
+
+    conn = db.get_db()
+    cursor = conn.execute("INSERT INTO products (name, price) VALUES (?, ?)", (name, price))
+    conn.commit()
+    return jsonify(product={"id": cursor.lastrowid, "name": name, "price": price}), 201
+
+
+@app.put("/api/products/<int:product_id>")
+@login_required_api
+def api_update_product(product_id):
+    conn = db.get_db()
+    if conn.execute("SELECT 1 FROM products WHERE id = ?", (product_id,)).fetchone() is None:
+        return jsonify(error="Product not found."), 404
+
+    name, price, error = read_product_form()
+    if error:
+        return jsonify(error=error), 400
+    if product_name_taken(name, except_id=product_id):
+        return jsonify(error=f"{name} is already in the list."), 409
+
+    conn.execute("UPDATE products SET name = ?, price = ? WHERE id = ?", (name, price, product_id))
+    conn.commit()
+    return jsonify(product={"id": product_id, "name": name, "price": price})

@@ -23,3 +23,10 @@ CREATE TABLE IF NOT EXISTS transactions (
     note        TEXT,
     date        TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
+
+-- Items sold in the store. price is in centavos, like transactions.amount.
+CREATE TABLE IF NOT EXISTS products (
+    id    INTEGER PRIMARY KEY AUTOINCREMENT,
+    name  TEXT NOT NULL,
+    price INTEGER NOT NULL CHECK (price > 0)
+);
