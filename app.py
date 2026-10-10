@@ -246,13 +246,15 @@ def collection_list():
 
 @app.get("/singilin")
 @login_required_page
-def collect_page():
-    return render_template("collect.html")
+def singilin_page():
+    return render_template("singilin.html")
 
 
-@app.get("/api/collect")
+# Not called /api/collect on purpose: ad/tracker blockers block URLs with "collect"
+# (analytics tools use it), which made the page fail with "Cannot reach the server".
+@app.get("/api/singilin")
 @login_required_api
-def api_collect():
+def api_singilin():
     return jsonify(
         customers=collection_list(),
         overdue_days=load_settings()["overdue_days"],

@@ -105,7 +105,7 @@ instance/          database and secret key (private, not in git)
 | POST | `/api/login` | Log in with `{"pin": "1234"}` |
 | POST | `/api/logout` | Log out |
 | GET | `/api/dashboard` | Summary numbers for the dashboard (includes `overdue_count`) |
-| GET | `/api/collect` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
+| GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
 | GET | `/api/customers` | All customers with their balances |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
 | GET | `/api/products` | All products |

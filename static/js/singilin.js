@@ -1,10 +1,10 @@
 // Singilin: customers who owe, longest-waiting utang first, with a "days" filter.
 
-let customers = []; // from /api/collect
+let customers = []; // from /api/singilin
 let overdueDays = 30; // from config/settings.json: this many days or more = "matagal"
 let minDays = null; // the selected filter (0 = everyone who owes)
 
-const list = document.getElementById("collect-list");
+const list = document.getElementById("singilin-list");
 const filters = document.getElementById("filters");
 
 function makeElement(tag, className, text) {
@@ -76,7 +76,7 @@ function render() {
   const shown = customers.filter((c) => c.days >= minDays);
   const total = shown.reduce((sum, c) => sum + c.balance, 0);
 
-  document.getElementById("collect-summary").textContent =
+  document.getElementById("singilin-summary").textContent =
     `${shown.length} customer${shown.length === 1 ? "" : "s"} · ${formatAmount(total)}`;
 
   if (shown.length) {
@@ -89,10 +89,10 @@ function render() {
 
 async function loadList() {
   try {
-    const response = await apiFetch("/api/collect");
+    const response = await apiFetch("/api/singilin");
     if (!response) return;
     if (!response.ok) {
-      showError("collect-error", "Could not load the list.");
+      showError("singilin-error", "Could not load the list.");
       return;
     }
     const data = await response.json();
@@ -100,8 +100,9 @@ async function loadList() {
     overdueDays = data.overdue_days;
     if (minDays === null) minDays = overdueDays; // start with the "matagal" ones
     render();
-  } catch {
-    showError("collect-error", "Cannot reach the server. Check your connection.");
+  } catch (error) {
+    console.error(error); // shows the real cause in the browser console (F12)
+    showError("singilin-error", "Cannot reach the server. Check your connection.");
   }
 }
 
