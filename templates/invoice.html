@@ -76,7 +76,7 @@
       <div class="py-2">Walang utang. Bayad na lahat. 🎉</div>
       {% else %}
 
-      <!-- Every utang and payment, oldest first. One line per item. -->
+      <!-- Unpaid utang, oldest first. One line per item. -->
       <table class="invoice-table">
         <tbody>
           {% for entry in invoice.entries %}
@@ -85,32 +85,31 @@
               {{ entry.date[:10] }}{% if entry.note %} · <span class="fst-italic">{{ entry.note }}</span>{% endif %}
             </td>
           </tr>
-          {% if entry.type == "utang" %}
-            {% for item in entry["items"] %}
-            <tr>
-              <td>
-                {{ item.name }}
-                <span class="text-body-secondary">· {{ item.quantity|qty }}{% if item.unit %} {{ item.unit }}{% endif %} × {{ item.price|peso }}</span>
-              </td>
-              <td class="text-end">{{ item.amount|peso }}</td>
-            </tr>
-            {% endfor %}
-            {% if entry["items"]|length > 1 %}
-            <tr class="invoice-subtotal">
-              <td class="text-end text-body-secondary">Subtotal</td>
-              <td class="text-end fw-semibold">{{ entry.amount|peso }}</td>
-            </tr>
-            {% endif %}
-          {% else %}
-            <tr>
-              <td>
-                Bayad
-                {% if entry.tendered %}
-                <span class="text-body-secondary">· natanggap {{ entry.tendered|peso }}, sukli {{ (entry.tendered - entry.amount)|peso }}</span>
-                {% endif %}
-              </td>
-              <td class="text-end">−{{ entry.amount|peso }}</td>
-            </tr>
+          {% for item in entry["items"] %}
+          <tr>
+            <td>
+              {{ item.name }}
+              <span class="text-body-secondary">· {{ item.quantity|qty }}{% if item.unit %} {{ item.unit }}{% endif %} × {{ item.price|peso }}</span>
+            </td>
+            <td class="text-end">{{ item.amount|peso }}</td>
+          </tr>
+          {% endfor %}
+          {% if entry["items"]|length > 1 %}
+          <tr class="invoice-subtotal">
+            <td class="text-end text-body-secondary">Subtotal</td>
+            <td class="text-end fw-semibold">{{ entry.amount|peso }}</td>
+          </tr>
+          {% endif %}
+          {% if entry.paid %}
+          <!-- Part of this utang was already paid (payments pay the oldest utang first) -->
+          <tr class="invoice-subtotal">
+            <td class="text-end text-body-secondary">Bayad na (partial)</td>
+            <td class="text-end">−{{ entry.paid|peso }}</td>
+          </tr>
+          <tr class="invoice-subtotal">
+            <td class="text-end text-body-secondary">Natitira</td>
+            <td class="text-end fw-semibold">{{ entry.remaining|peso }}</td>
+          </tr>
           {% endif %}
           {% endfor %}
         </tbody>
@@ -140,10 +139,10 @@
             <td>Total utang</td>
             <td class="text-end">{{ invoice.total_utang|peso }}</td>
           </tr>
-          {% if invoice.total_paid %}
+          {% if invoice.partly_paid %}
           <tr>
-            <td>Bayad</td>
-            <td class="text-end">−{{ invoice.total_paid|peso }}</td>
+            <td>Bayad na (partial)</td>
+            <td class="text-end">−{{ invoice.partly_paid|peso }}</td>
           </tr>
           {% endif %}
           <tr class="invoice-balance">
@@ -152,6 +151,9 @@
           </tr>
         </tbody>
       </table>
+      {% if invoice.last_payment %}
+      <div class="text-body-secondary mt-1" style="font-size: 0.75em;">Huling bayad: {{ invoice.last_payment[:10] }}</div>
+      {% endif %}
       {% endif %}
     </div>
   </div>

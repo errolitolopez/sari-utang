@@ -728,28 +728,37 @@ def describe_item(item):
 
 
 def invoice_data(customer_id):
-    """Everything since the customer last owed nothing.
+    """Only the utang that is still unpaid.
 
-    When the balance reaches P0, the old entries are settled, so the invoice
-    starts again from the next utang. Voided entries are left out.
+    Payments pay off the oldest utang first (same rule as the Singilin list):
+    - an utang fully covered by payments is left out,
+    - an utang partly covered is shown with how much was already paid on it,
+    - newer utang are shown in full.
+    Voided entries are left out.
     """
     conn = db.get_db()
     rows = conn.execute(
         """
-        SELECT id, type, amount, note, date, tendered FROM transactions
+        SELECT id, type, amount, note, date FROM transactions
         WHERE customer_id = ? AND voided_at IS NULL
         ORDER BY date, id
         """,
         (customer_id,),
     ).fetchall()
 
-    balance = 0
-    start = 0  # index of the first entry after the balance was last P0
-    for index, row in enumerate(rows):
-        balance += row["amount"] if row["type"] == "utang" else -row["amount"]
-        if balance <= 0:
-            start = index + 1
-    entries = [dict(row, items=[]) for row in rows[start:]]
+    payments = [r for r in rows if r["type"] == "payment"]
+    paid_left = sum(p["amount"] for p in payments)  # payments not yet applied to an utang
+
+    entries = []
+    for row in rows:
+        if row["type"] != "utang":
+            continue
+        if paid_left >= row["amount"]:
+            paid_left -= row["amount"]  # fully paid: not on the invoice
+            continue
+        paid = paid_left  # 0, or part of this utang that was already paid
+        paid_left = 0
+        entries.append(dict(row, items=[], paid=paid, remaining=row["amount"] - paid))
 
     by_id = {e["id"]: e for e in entries}
     if by_id:
@@ -773,14 +782,15 @@ def invoice_data(customer_id):
             total["amount"] += item["amount"]
     product_totals = sorted(products.values(), key=lambda p: -p["amount"])
 
-    total_utang = sum(e["amount"] for e in entries if e["type"] == "utang")
-    total_paid = sum(e["amount"] for e in entries if e["type"] == "payment")
+    total_utang = sum(e["amount"] for e in entries)
+    partly_paid = sum(e["paid"] for e in entries)
     return {
         "entries": entries,
         "products": product_totals,
         "total_utang": total_utang,
-        "total_paid": total_paid,
-        "balance": total_utang - total_paid,
+        "partly_paid": partly_paid,
+        "balance": total_utang - partly_paid,
+        "last_payment": payments[-1]["date"] if payments else None,
     }
 
 
@@ -790,15 +800,15 @@ def invoice_text(store_name, customer, invoice, today):
     if not invoice["entries"]:
         return "\n".join(lines + ["Walang utang. Bayad na lahat."])
     for entry in invoice["entries"]:
-        day = entry["date"][:10]
-        if entry["type"] == "utang":
-            items = ", ".join(describe_item(i) for i in entry["items"]) or "Utang"
-            lines.append(f"{day}  {items}: {peso_filter(entry['amount'])}")
-        else:
-            lines.append(f"{day}  Bayad: -{peso_filter(entry['amount'])}")
+        items = ", ".join(describe_item(i) for i in entry["items"]) or "Utang"
+        lines.append(f"{entry['date'][:10]}  {items}: {peso_filter(entry['amount'])}")
+        if entry["paid"]:
+            lines.append(
+                f"   bayad na -{peso_filter(entry['paid'])}, natitira {peso_filter(entry['remaining'])}"
+            )
     lines += ["", f"Total utang: {peso_filter(invoice['total_utang'])}"]
-    if invoice["total_paid"]:
-        lines.append(f"Bayad: -{peso_filter(invoice['total_paid'])}")
+    if invoice["partly_paid"]:
+        lines.append(f"Bayad na (partial): -{peso_filter(invoice['partly_paid'])}")
     lines.append(f"Balance: {peso_filter(invoice['balance'])}")
     return "\n".join(lines)
 
