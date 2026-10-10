@@ -9,7 +9,7 @@ Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
 - Dashboard: total utang, customers with utang, biggest balances, recent transactions
 - Products import/export as Excel (.xlsx): export (with a unit dropdown), edit prices, import back. New name + unit is added, same name + unit gets its price updated, nothing is deleted. All or nothing: a file with a bad row imports nothing and lists the rows to fix
-- Customer (suki) list with balances, search by name or phone, add customers
+- Customer (suki) list: highest utang first, paged (20 per page), search by name or phone, add customers
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
 - Add utang: pick products, set quantities with − / + buttons or type them (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
 - Record payments (bayad): full or partial, optional note. Paying more than the utang counts as paid in full and shows the sukli (change)
@@ -127,7 +127,7 @@ instance/          database and secret key (private, not in git)
 | GET | `/customers/<id>/invoice.pdf` | One customer's invoice as PDF |
 | GET | `/singilin/invoices.zip?min_days=30` | ZIP of PDF invoices, one per customer with utang (optional `min_days` filter) |
 | GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid utang has waited (payments pay off the oldest utang first) |
-| GET | `/api/customers` | All customers with their balances |
+| GET | `/api/customers` | Customers with their balances, highest utang first; paged with `?page=1&per_page=20&q=nena` |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
 | GET | `/api/products` | All products, or one page with `?page=1&per_page=20&q=coke` (returns `page`, `pages`, `total`) |
 | POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000, "unit": "bottle"}` |
