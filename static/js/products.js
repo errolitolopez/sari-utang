@@ -83,13 +83,26 @@ async function loadProducts() {
   }
 }
 
+// Selects a unit in the dropdown. If the unit was removed from config/units.json
+// but a product still uses it, it is added as an extra option so it isn't lost.
+function setUnit(unit) {
+  unitSelect.querySelectorAll("option[data-removed]").forEach((option) => option.remove());
+  const exists = [...unitSelect.options].some((option) => option.value === unit);
+  if (!exists) {
+    const option = new Option(`${unit} (removed from list)`, unit);
+    option.dataset.removed = "true";
+    unitSelect.add(option);
+  }
+  unitSelect.value = unit;
+}
+
 // Opens the popup empty (add) or filled in with a product (edit).
 function openForm(product) {
   editingId = product ? product.id : null;
   modalTitle.textContent = product ? "Edit product" : "Add product";
   nameInput.value = product ? product.name : "";
   priceInput.value = product ? priceForInput(product.price) : "";
-  unitSelect.value = product ? product.unit : "pc";
+  setUnit(product ? product.unit : unitSelect.options[0].value);
   hideError("product-form-error");
   modal.show();
 }

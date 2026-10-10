@@ -3,6 +3,7 @@
 Run with: flask --app app run --debug
 """
 
+import json
 import os
 import re
 import secrets
@@ -218,23 +219,34 @@ def api_add_customer():
 
 MAX_PRICE = 100_000_00  # P100,000.00 in centavos, catches typos like an extra zero
 
-# What one "price" buys. The order here is the order in the dropdown.
-UNITS = {
-    "pc": "pc (piraso)",
-    "pack": "pack",
-    "sachet": "sachet",
-    "bottle": "bottle",
-    "can": "can",
-    "kg": "kg (kilo)",
-    "g": "g (gram)",
-    "L": "L (litro)",
-    "ml": "ml",
-    "oz": "oz (ounce)",
-}
+UNITS_FILE = os.path.join(app.root_path, "config", "units.json")
 
 
-def read_product_form():
-    """Check the name, price and unit sent by the page. Returns (product, error)."""
+def load_units():
+    """Read the units (what one "price" buys) from config/units.json.
+
+    The file is read every time, so edits show up on the next page refresh.
+    Format: {"kg": "kg (kilo)", ...} -> the key is saved with the product,
+    the text is shown in the dropdown. The first unit is the default.
+    """
+    with open(UNITS_FILE, encoding="utf8") as f:
+        units = json.load(f)
+    valid = (
+        isinstance(units, dict)
+        and units
+        and all(isinstance(k, str) and k.strip() and isinstance(v, str) for k, v in units.items())
+    )
+    if not valid:
+        raise ValueError(f'{UNITS_FILE} must look like {{"pc": "pc (piraso)", "kg": "kg (kilo)"}}')
+    return units
+
+
+def read_product_form(current_unit=None):
+    """Check the name, price and unit sent by the page. Returns (product, error).
+
+    current_unit: when editing, the product's saved unit is still allowed even if
+    it was removed from config/units.json, so the product can be saved unchanged.
+    """
     data = request.get_json(silent=True) or {}
     name = " ".join(str(data.get("name", "")).split())
     price = data.get("price")
@@ -249,7 +261,7 @@ def read_product_form():
         return None, "Price must be more than P0."
     if price > MAX_PRICE:
         return None, "Price is too high (max P100,000)."
-    if not isinstance(unit, str) or unit not in UNITS:
+    if not isinstance(unit, str) or (unit not in load_units() and unit != current_unit):
         return None, "Choose a unit from the list."
     return {"name": name, "price": price, "unit": unit}, None
 
@@ -264,7 +276,7 @@ def product_name_taken(name, except_id=None):
 @app.get("/products")
 @login_required_page
 def products_page():
-    return render_template("products.html", units=UNITS)
+    return render_template("products.html", units=load_units())
 
 
 @app.get("/api/products")
@@ -297,10 +309,11 @@ def api_add_product():
 @login_required_api
 def api_update_product(product_id):
     conn = db.get_db()
-    if conn.execute("SELECT 1 FROM products WHERE id = ?", (product_id,)).fetchone() is None:
+    saved = conn.execute("SELECT unit FROM products WHERE id = ?", (product_id,)).fetchone()
+    if saved is None:
         return jsonify(error="Product not found."), 404
 
-    product, error = read_product_form()
+    product, error = read_product_form(current_unit=saved["unit"])
     if error:
         return jsonify(error=error), 400
     if product_name_taken(product["name"], except_id=product_id):
