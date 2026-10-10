@@ -136,6 +136,33 @@
     </form>
   </div>
 </div>
+
+<!-- Void confirmation -->
+<div class="modal fade" id="void-modal" tabindex="-1" aria-labelledby="void-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="void-form" class="modal-content" novalidate>
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="void-modal-title">Void this entry?</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="void-summary" class="border rounded p-2 mb-3"></div>
+        <p class="small text-body-secondary">
+          It will stay in the history, crossed out, and will no longer count in the balance.
+          This can't be undone.
+        </p>
+        <label for="void-reason" class="form-label">Reason <span class="text-body-secondary">(optional)</span></label>
+        <input id="void-reason" class="form-control mb-3" maxlength="200" autocomplete="off"
+               placeholder="e.g. maling quantity">
+        <div id="void-error" class="alert alert-danger py-2 mb-0 d-none" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="confirm-void-button" type="submit" class="btn btn-danger">Void</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}

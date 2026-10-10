@@ -48,6 +48,12 @@ def add_missing_columns(db):
     product_columns = [row["name"] for row in db.execute("PRAGMA table_info(products)")]
     if "unit" not in product_columns:
         db.execute("ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'pc'")
+
+    transaction_columns = [row["name"] for row in db.execute("PRAGMA table_info(transactions)")]
+    if "voided_at" not in transaction_columns:
+        db.execute("ALTER TABLE transactions ADD COLUMN voided_at TEXT")
+    if "void_reason" not in transaction_columns:
+        db.execute("ALTER TABLE transactions ADD COLUMN void_reason TEXT")
     db.commit()
 
 

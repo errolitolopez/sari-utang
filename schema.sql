@@ -15,13 +15,17 @@ CREATE TABLE IF NOT EXISTS customers (
 
 -- Every utang and every payment is one row.
 -- amount is stored in centavos (P12.50 = 1250) so sums never have rounding errors.
+-- A mistake is voided, not deleted: voided_at is set and the row no longer counts
+-- in balances, but it stays in the history.
 CREATE TABLE IF NOT EXISTS transactions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     customer_id INTEGER NOT NULL REFERENCES customers (id),
     type        TEXT NOT NULL CHECK (type IN ('utang', 'payment')),
     amount      INTEGER NOT NULL CHECK (amount > 0),
     note        TEXT,
-    date        TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    date        TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    voided_at   TEXT,
+    void_reason TEXT
 );
 
 -- Items sold in the store. price is in centavos, like transactions.amount,

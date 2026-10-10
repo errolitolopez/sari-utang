@@ -67,28 +67,48 @@ function renderCustomer(customer) {
   document.getElementById("add-payment-button").disabled = balance <= 0;
 }
 
+// What an entry is about: "2 bottle Coke Mismo, 0.5 kg Bigas" or "Bayad".
+function describeTransaction(transaction) {
+  if (transaction.items.length) return transaction.items.map(describeItem).join(", ");
+  return transaction.type === "utang" ? "Utang" : "Bayad";
+}
+
 function historyItem(transaction) {
   const isUtang = transaction.type === "utang";
-  const li = makeElement("li", "list-group-item");
+  const isVoided = transaction.voided_at !== null;
+  const li = makeElement("li", `list-group-item ${isVoided ? "bg-body-tertiary" : ""}`);
 
+  // Voided entries are crossed out and greyed, so it's clear they don't count.
+  const body = makeElement("div", isVoided ? "text-decoration-line-through text-body-secondary" : "");
   const top = makeElement("div", "d-flex justify-content-between");
   top.append(
     makeElement("span", "small text-body-secondary", transaction.date),
     makeElement(
       "span",
-      `fw-semibold ${isUtang ? "text-danger" : "text-success"}`,
+      `fw-semibold ${isVoided ? "" : isUtang ? "text-danger" : "text-success"}`,
       (isUtang ? "+" : "−") + formatAmount(transaction.amount)
     )
   );
-  li.append(top);
-
-  if (transaction.items.length) {
-    li.append(makeElement("div", "", transaction.items.map(describeItem).join(", ")));
-  } else if (!isUtang) {
-    li.append(makeElement("div", "", "Bayad"));
-  }
+  body.append(top, makeElement("div", "", describeTransaction(transaction)));
   if (transaction.note) {
-    li.append(makeElement("div", "small text-body-secondary fst-italic", transaction.note));
+    body.append(makeElement("div", "small text-body-secondary fst-italic", transaction.note));
+  }
+  li.append(body);
+
+  if (isVoided) {
+    const voided = makeElement("div", "small text-danger mt-1");
+    voided.append(makeElement("span", "badge text-bg-danger me-1", "VOIDED"));
+    voided.append(
+      document.createTextNode(
+        [transaction.voided_at, transaction.void_reason].filter(Boolean).join(" · ")
+      )
+    );
+    li.append(voided);
+  } else {
+    const voidButton = makeElement("button", "btn btn-link btn-sm text-danger p-0 mt-1", "Void");
+    voidButton.type = "button";
+    voidButton.addEventListener("click", () => openVoidForm(transaction));
+    li.append(voidButton);
   }
   return li;
 }
@@ -392,6 +412,57 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
 document.getElementById("payment-modal").addEventListener("shown.bs.modal", () => paymentAmount.focus());
 paymentAmount.addEventListener("input", renderRemaining);
 document.getElementById("add-payment-button").addEventListener("click", openPaymentForm);
+
+// --- Void --------------------------------------------------------------------
+
+const voidModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("void-modal"));
+const voidReason = document.getElementById("void-reason");
+const confirmVoidButton = document.getElementById("confirm-void-button");
+let voidingId = null; // the transaction shown in the void popup
+
+function openVoidForm(transaction) {
+  voidingId = transaction.id;
+  const isUtang = transaction.type === "utang";
+  const summary = document.getElementById("void-summary");
+  summary.replaceChildren(
+    makeElement(
+      "div",
+      `fw-semibold ${isUtang ? "text-danger" : "text-success"}`,
+      `${isUtang ? "Utang" : "Bayad"} ${formatAmount(transaction.amount)}`
+    ),
+    makeElement("div", "", describeTransaction(transaction)),
+    makeElement("div", "small text-body-secondary", transaction.date)
+  );
+  voidReason.value = "";
+  hideError("void-error");
+  voidModal.show();
+}
+
+document.getElementById("void-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  hideError("void-error");
+
+  confirmVoidButton.disabled = true;
+  try {
+    const response = await apiFetch(`/api/transactions/${voidingId}/void`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: voidReason.value.trim() }),
+    });
+    if (!response) return;
+    const data = await response.json();
+    if (!response.ok) {
+      showError("void-error", data.error || "Could not void this entry.");
+      return;
+    }
+    voidModal.hide();
+    await loadCustomer();
+  } catch {
+    showError("void-error", "Cannot reach the server. Check your connection.");
+  } finally {
+    confirmVoidButton.disabled = false;
+  }
+});
 
 // --- Start -------------------------------------------------------------------
 

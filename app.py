@@ -144,12 +144,13 @@ def api_logout():
     return jsonify(ok=True)
 
 
+# Voided transactions are left out of every balance.
 BALANCES_SQL = """
     SELECT c.id, c.name, c.phone,
            COALESCE(SUM(CASE WHEN t.type = 'utang' THEN t.amount ELSE -t.amount END), 0)
                AS balance
     FROM customers c
-    LEFT JOIN transactions t ON t.customer_id = c.id
+    LEFT JOIN transactions t ON t.customer_id = c.id AND t.voided_at IS NULL
 """
 
 
@@ -178,6 +179,7 @@ def api_dashboard():
         SELECT t.id, t.type, t.amount, t.note, t.date, t.customer_id, c.name AS customer_name
         FROM transactions t
         JOIN customers c ON c.id = t.customer_id
+        WHERE t.voided_at IS NULL
         ORDER BY t.date DESC, t.id DESC
         LIMIT 5
         """
@@ -361,7 +363,7 @@ def api_customer_transactions(customer_id):
         dict(row, items=[])
         for row in conn.execute(
             """
-            SELECT id, type, amount, note, date FROM transactions
+            SELECT id, type, amount, note, date, voided_at, void_reason FROM transactions
             WHERE customer_id = ?
             ORDER BY date DESC, id DESC
             """,
@@ -538,3 +540,41 @@ def add_payment(customer, amount, note):
 
     balance = customer["balance"] - amount
     return jsonify(transaction={"id": cursor.lastrowid, "amount": amount}, balance=balance), 201
+
+
+@app.post("/api/transactions/<int:transaction_id>/void")
+@login_required_api
+def api_void_transaction(transaction_id):
+    """Cancel an utang or payment entered by mistake. It stays in the history, crossed out."""
+    conn = db.get_db()
+    transaction = conn.execute(
+        "SELECT id, customer_id, type, amount, voided_at FROM transactions WHERE id = ?",
+        (transaction_id,),
+    ).fetchone()
+    if transaction is None:
+        return jsonify(error="Transaction not found."), 404
+    if transaction["voided_at"] is not None:
+        return jsonify(error="This is already voided."), 400
+
+    data = request.get_json(silent=True) or {}
+    reason = " ".join(str(data.get("reason") or "").split())
+    if len(reason) > 200:
+        return jsonify(error="Reason is too long (max 200 characters)."), 400
+
+    # Voiding an utang lowers the balance. If part of it was already paid, the
+    # balance would go below zero, so the payment has to be voided first.
+    customer = find_customer(transaction["customer_id"])
+    if transaction["type"] == "utang" and customer["balance"] - transaction["amount"] < 0:
+        return jsonify(
+            error="Part of this utang was already paid. Void the payment first, then this utang."
+        ), 400
+
+    conn.execute(
+        "UPDATE transactions SET voided_at = datetime('now', 'localtime'), void_reason = ? "
+        "WHERE id = ?",
+        (reason or None, transaction_id),
+    )
+    conn.commit()
+
+    change = -transaction["amount"] if transaction["type"] == "utang" else transaction["amount"]
+    return jsonify(ok=True, balance=customer["balance"] + change)
