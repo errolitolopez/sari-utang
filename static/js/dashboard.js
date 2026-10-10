@@ -1,9 +1,12 @@
 // Loads the summary from /api/dashboard and fills in the page.
 
-// Builds one list row. textContent is used (not innerHTML) so names can't inject HTML.
-function listItem(title, subtitle, amountText, amountClass) {
-  const li = document.createElement("li");
-  li.className = "list-group-item d-flex justify-content-between align-items-center";
+// Builds one list row that opens the customer when tapped.
+// textContent is used (not innerHTML) so names can't inject HTML.
+function listItem(customerId, title, subtitle, amountText, amountClass) {
+  const li = document.createElement("a");
+  li.href = `/customers/${customerId}`;
+  li.className =
+    "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
 
   const left = document.createElement("div");
   const name = document.createElement("div");
@@ -25,10 +28,10 @@ function listItem(title, subtitle, amountText, amountClass) {
 }
 
 function emptyItem(message) {
-  const li = document.createElement("li");
-  li.className = "list-group-item text-body-secondary";
-  li.textContent = message;
-  return li;
+  const div = document.createElement("div");
+  div.className = "list-group-item text-body-secondary";
+  div.textContent = message;
+  return div;
 }
 
 function render(data) {
@@ -39,7 +42,7 @@ function render(data) {
   const top = document.getElementById("top-balances");
   top.replaceChildren(
     ...(data.top_balances.length
-      ? data.top_balances.map((c) => listItem(c.name, "", formatAmount(c.balance), "text-danger"))
+      ? data.top_balances.map((c) => listItem(c.id, c.name, "", formatAmount(c.balance), "text-danger"))
       : [emptyItem("Walang utang. 🎉")])
   );
 
@@ -50,6 +53,7 @@ function render(data) {
           const isUtang = t.type === "utang";
           const subtitle = [t.date, t.note].filter(Boolean).join(" · ");
           return listItem(
+            t.customer_id,
             t.customer_name,
             subtitle,
             (isUtang ? "+" : "−") + formatAmount(t.amount),

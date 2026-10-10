@@ -11,11 +11,13 @@ const nameInput = document.getElementById("customer-name");
 const phoneInput = document.getElementById("customer-phone");
 const saveButton = document.getElementById("add-customer-button");
 
-// One row: name and phone on the left, balance on the right.
+// One row: name and phone on the left, balance on the right. Tapping it opens the customer.
 // textContent is used (not innerHTML) so names can't inject HTML.
 function customerItem(customer) {
-  const li = document.createElement("li");
-  li.className = "list-group-item d-flex justify-content-between align-items-center";
+  const row = document.createElement("a");
+  row.href = `/customers/${customer.id}`;
+  row.className =
+    "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
 
   const left = document.createElement("div");
   const name = document.createElement("div");
@@ -37,15 +39,15 @@ function customerItem(customer) {
     balance.textContent = "Walang utang";
   }
 
-  li.append(left, balance);
-  return li;
+  row.append(left, balance);
+  return row;
 }
 
 function messageItem(text) {
-  const li = document.createElement("li");
-  li.className = "list-group-item text-body-secondary";
-  li.textContent = text;
-  return li;
+  const div = document.createElement("div");
+  div.className = "list-group-item text-body-secondary";
+  div.textContent = text;
+  return div;
 }
 
 function render() {
