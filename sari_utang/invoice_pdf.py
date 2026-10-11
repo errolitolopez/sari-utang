@@ -5,9 +5,10 @@ because the built-in PDF fonts don't have the peso sign.
 """
 
 import os
-from decimal import Decimal
 
 from fpdf import FPDF
+
+from sari_utang.domain.money import peso, qty
 
 FONTS_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 
@@ -15,16 +16,6 @@ GREY = (108, 117, 125)
 BLACK = (33, 37, 41)
 AMOUNT_WIDTH = 22  # mm, the right-hand column for amounts
 LINE = 4.2  # mm, height of one line of text
-
-
-def peso(centavos):
-    """1250 -> "₱12.50" """
-    return f"₱{centavos / 100:,.2f}"
-
-
-def qty(quantity):
-    """2.0 -> "2", 0.5 -> "0.5" """
-    return f"{Decimal(str(quantity)).normalize():f}"
 
 
 class InvoicePDF(FPDF):

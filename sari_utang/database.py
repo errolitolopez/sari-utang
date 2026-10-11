@@ -1,11 +1,11 @@
-"""Database helpers: open/close the SQLite connection and CLI setup commands."""
+"""The SQLite database: one connection per request, creating and upgrading the tables,
+and the init-db command."""
 
 import sqlite3
 
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
-from werkzeug.security import generate_password_hash
 
 
 def get_db():
@@ -21,11 +21,6 @@ def close_db(error=None):
     db = g.pop("db", None)
     if db is not None:
         db.close()
-
-
-def get_setting(key):
-    row = get_db().execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
-    return row["value"] if row else None
 
 
 def init_db():
@@ -64,34 +59,7 @@ def add_missing_columns(db):
     db.commit()
 
 
-@click.command("set-pin")
-@with_appcontext
-@click.password_option("--pin", prompt="New PIN", help="4 to 6 digits.")
-def set_pin_command(pin):
-    """Set or change the login PIN."""
-    if not is_valid_pin(pin):
-        raise click.BadParameter("PIN must be 4 to 6 digits.")
-    set_pin(pin)
-    click.echo("PIN saved.")
-
-
-def is_valid_pin(pin):
-    return pin.isdigit() and 4 <= len(pin) <= 6
-
-
-def set_pin(pin):
-    """Save the login PIN. Only the hash is saved, never the PIN itself."""
-    db = get_db()
-    db.execute(
-        "INSERT INTO settings (key, value) VALUES ('pin_hash', ?) "
-        "ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-        (generate_password_hash(pin),),
-    )
-    db.commit()
-
-
 def init_app(app):
     """Register the database helpers with the Flask app."""
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
-    app.cli.add_command(set_pin_command)

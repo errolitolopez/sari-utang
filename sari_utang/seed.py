@@ -16,7 +16,7 @@ import click
 from flask import current_app
 from flask.cli import with_appcontext
 
-from db import get_db
+from sari_utang.database import get_db
 
 # (name, price in pesos, unit). Prices are typical, adjust them in the Products page.
 PRODUCTS = [

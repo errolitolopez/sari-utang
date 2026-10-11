@@ -16,7 +16,7 @@ $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($path)
 $shortcut.TargetPath = $pythonw
 $shortcut.Arguments = '"' + (Join-Path $appDir "start.py") + '" ' + $Flags
 $shortcut.WorkingDirectory = $appDir
-$shortcut.IconLocation = Join-Path $appDir "static\icon.ico"
+$shortcut.IconLocation = Join-Path $appDir "sari_utang\static\icon.ico"
 $shortcut.Description = "Sari Utang"
 $shortcut.Save()
 Write-Host "Created: $path"

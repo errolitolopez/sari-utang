@@ -34,7 +34,7 @@ from datetime import datetime
 
 import updater
 
-# app.py and db.py are imported inside main(), after the auto-update,
+# app.py and the sari_utang package are imported inside main(), after the auto-update,
 # so a freshly pulled version is the one that runs.
 
 PORT = 5000
@@ -78,14 +78,14 @@ def log_to_file():
 
 def ask_for_pin():
     """Ask until a valid PIN is typed. Empty means 0000."""
-    import db
+    from sari_utang.domain.pin import is_valid_pin
 
     while True:
         pin = getpass.getpass("No PIN set yet. Enter a 4 to 6 digit PIN (press Enter for 0000): ").strip()
         if not pin:
             print("Using the default PIN 0000. Change it later by running change-pin.bat")
             return "0000"
-        if db.is_valid_pin(pin):
+        if is_valid_pin(pin):
             if getpass.getpass("Type the PIN again: ").strip() == pin:
                 return pin
             print("The two PINs are different. Try again.")
@@ -201,10 +201,11 @@ def main():
     elif not is_running() and updater.update():
         restart(args.background)  # run the code that was just pulled
 
-    import db
     from waitress.server import create_server
 
     from app import app
+    from sari_utang.database import get_db, init_db
+    from sari_utang.services import AuthService
 
     if is_running():
         print(f"Sari Utang is already running: {LOCAL_URL}")
@@ -215,12 +216,13 @@ def main():
         return
 
     with app.app_context():
-        db.init_db()
-        if db.get_setting("pin_hash") is None:
+        init_db()
+        auth = AuthService(get_db())
+        if not auth.has_pin():
             if args.background:
                 notify("No PIN is set yet. Double-click run.bat once to set the PIN.")
                 return
-            db.set_pin(ask_for_pin())
+            auth.set_pin(ask_for_pin())
 
     backup = backup_database(app.config["DATABASE"])
     address = wifi_address()

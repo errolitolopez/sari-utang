@@ -6,7 +6,7 @@
 {% include "_navbar.html" %}
 
 <main class="container py-3" id="customer-page" data-customer-id="{{ customer_id }}">
-  <a href="{{ url_for('customers_page') }}" class="btn btn-link px-0 mb-2">← Customers</a>
+  <a href="{{ url_for('customers.list_page') }}" class="btn btn-link px-0 mb-2">← Customers</a>
 
   <div id="customer-error" class="alert alert-danger d-none" role="alert"></div>
   <div id="customer-message" class="alert alert-success alert-dismissible d-none" role="status">
@@ -37,7 +37,7 @@
       <button id="add-payment-button" class="btn btn-success btn-lg w-100" disabled>Bayad</button>
     </div>
     <div class="col-12">
-      <a href="{{ url_for('invoice_page', customer_id=customer_id) }}" class="btn btn-outline-secondary w-100">
+      <a href="{{ url_for('invoices.page', customer_id=customer_id) }}" class="btn btn-outline-secondary w-100">
         Invoice
       </a>
     </div>

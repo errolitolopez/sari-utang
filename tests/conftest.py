@@ -37,13 +37,7 @@ def reset_database():
 
 def reset_login_throttle():
     """Forget wrong-PIN counts from earlier tests."""
-    import app as app_module
-    throttle = getattr(app_module, "failed_logins", None)
-    if throttle is not None:
-        throttle.clear()
-    for extension in flask_app.extensions.values():
-        if hasattr(extension, "reset"):
-            extension.reset()
+    flask_app.extensions["login_throttle"].reset()
 
 
 @pytest.fixture(autouse=True)
