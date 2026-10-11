@@ -73,7 +73,7 @@ def invoice_text(store_name, customer_name, invoice, today):
     if not invoice["entries"]:
         return "\n".join(lines + ["No debt. All paid."])
     for entry in invoice["entries"]:
-        items = ", ".join(describe_item(i) for i in entry["items"]) or "Utang"
+        items = ", ".join(describe_item(i) for i in entry["items"]) or "Debt"
         lines.append(f"{entry['date'][:10]}  {items}: {peso(entry['amount'])}")
         if entry["paid"]:
             lines.append(f"   already paid -{peso(entry['paid'])}, remaining {peso(entry['remaining'])}")
