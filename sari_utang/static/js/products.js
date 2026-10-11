@@ -19,19 +19,19 @@ const unitSelect = document.getElementById("product-unit");
 const saveButton = document.getElementById("save-product-button");
 
 // "12.5" -> 1250 centavos. Returns null if it is not a valid price.
-function parsePrice(text) {
+const parsePrice = (text) => {
   const cleaned = text.replace(/,/g, "").trim();
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   return Math.round(Number(cleaned) * 100);
-}
+};
 
 // 1250 centavos -> "12.50" for the price field.
-function priceForInput(centavos) {
+const priceForInput = (centavos) => {
   return (centavos / 100).toFixed(2);
-}
+};
 
 // One row you can tap to edit. textContent is used so names can't inject HTML.
-function productItem(product) {
+const productItem = (product) => {
   const button = document.createElement("button");
   button.type = "button";
   button.className =
@@ -47,16 +47,10 @@ function productItem(product) {
   button.append(name, price);
   button.addEventListener("click", () => openForm(product));
   return button;
-}
+};
 
-function messageItem(text) {
-  const div = document.createElement("div");
-  div.className = "list-group-item text-body-secondary";
-  div.textContent = text;
-  return div;
-}
-
-function render(data) {
+// render(data) -> the product rows, the "20 total" line and the pager
+const render = (data) => {
   const searching = searchInput.value.trim() !== "";
   if (data.all_count === 0) {
     list.replaceChildren(messageItem("No products yet. Tap + Add to add one."));
@@ -77,10 +71,10 @@ function render(data) {
   document.getElementById("page-info").textContent = `Page ${page} of ${pages}`;
   document.getElementById("prev-page").disabled = page <= 1;
   document.getElementById("next-page").disabled = page >= pages;
-}
+};
 
 // Loads one page of products from the server (search is done on the server too).
-async function loadProducts() {
+const loadProducts = async () => {
   const thisLoad = ++loadNumber;
   const query = encodeURIComponent(searchInput.value.trim());
   try {
@@ -96,17 +90,18 @@ async function loadProducts() {
     console.error(error);
     showError("products-error", "Cannot reach the server. Check your connection.");
   }
-}
+};
 
-function goToPage(newPage) {
+// goToPage(2) -> loads page 2 of the list and scrolls to the top
+const goToPage = (newPage) => {
   page = newPage;
   loadProducts();
   window.scrollTo({ top: 0 });
-}
+};
 
 // Selects a unit in the dropdown. If the unit was removed from config/units.json
 // but a product still uses it, it is added as an extra option so it isn't lost.
-function setUnit(unit) {
+const setUnit = (unit) => {
   unitSelect.querySelectorAll("option[data-removed]").forEach((option) => option.remove());
   const exists = [...unitSelect.options].some((option) => option.value === unit);
   if (!exists) {
@@ -115,10 +110,10 @@ function setUnit(unit) {
     unitSelect.add(option);
   }
   unitSelect.value = unit;
-}
+};
 
 // Opens the popup empty (add) or filled in with a product (edit).
-function openForm(product) {
+const openForm = (product) => {
   editingId = product ? product.id : null;
   modalTitle.textContent = product ? "Edit product" : "Add product";
   nameInput.value = product ? product.name : "";
@@ -126,7 +121,7 @@ function openForm(product) {
   setUnit(product ? product.unit : unitSelect.options[0].value);
   hideError("product-form-error");
   modal.show();
-}
+};
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -145,7 +140,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  saveButton.disabled = true;
+  setBusy(saveButton, true);
   try {
     const url = editingId ? `/api/products/${editingId}` : "/api/products";
     const response = await apiFetch(url, {
@@ -164,7 +159,7 @@ form.addEventListener("submit", async (event) => {
   } catch {
     showError("product-form-error", "Cannot reach the server. Check your connection.");
   } finally {
-    saveButton.disabled = false;
+    setBusy(saveButton, false);
   }
 });
 
@@ -176,7 +171,8 @@ const importFile = document.getElementById("import-file");
 const importErrors = document.getElementById("import-errors");
 const importButton = document.getElementById("import-button");
 
-function showImportErrors(errors, total) {
+// showImportErrors(["Row 3: unit is empty"], 5) -> the list of rows to fix, "…and 4 more."
+const showImportErrors = (errors, total) => {
   const list = document.createElement("ul");
   list.className = "mb-0 ps-3";
   for (const error of errors) {
@@ -194,7 +190,7 @@ function showImportErrors(errors, total) {
     importErrors.append(more);
   }
   importErrors.classList.remove("d-none");
-}
+};
 
 importModalElement.addEventListener("show.bs.modal", () => {
   importFile.value = "";
@@ -211,7 +207,7 @@ document.getElementById("import-form").addEventListener("submit", async (event) 
 
   const body = new FormData();
   body.append("file", importFile.files[0]);
-  importButton.disabled = true;
+  setBusy(importButton, true);
   try {
     const response = await apiFetch("/api/products/import", { method: "POST", body });
     if (!response) return;
@@ -233,7 +229,7 @@ document.getElementById("import-form").addEventListener("submit", async (event) 
     console.error(error);
     showImportErrors(["Cannot reach the server. Check your connection."], 1);
   } finally {
-    importButton.disabled = false;
+    setBusy(importButton, false);
   }
 });
 

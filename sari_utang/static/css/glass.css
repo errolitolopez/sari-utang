@@ -1,0 +1,222 @@
+/* Simple glassmorphism on top of Bootstrap, in a neutral gray / slate palette: a calm gradient
+   page, frosted (translucent + blurred) cards, modals and navbar, transparent inputs.
+   Light and dark follow data-bs-theme (see theme.js). Where blur isn't supported, or the
+   person asked for less transparency, panels are plain and opaque. */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-bg-strong: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(226, 232, 240, 0.8);
+  --glass-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --glass-blur: blur(12px);
+  --glass-hover: rgba(255, 255, 255, 0.85);
+  --glass-input: transparent;
+  --glass-input-focus: rgba(255, 255, 255, 0.55);
+  --glass-input-disabled: rgba(148, 163, 184, 0.18);
+  --glass-input-border: rgba(209, 213, 219, 0.8);
+  --glass-input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
+  --glass-solid: #fff;
+  --navbar-bg: rgba(255, 255, 255, 0.7);
+  --page-base: #f3f4f6;
+  --page-gradient: radial-gradient(circle at top left, hsl(220 13% 95%), hsl(220 13% 91%));
+  --scroll-thumb: rgba(100, 116, 139, 0.5);
+  --invoice-rule: #adb5bd;
+  --paper: #fff;
+}
+
+[data-bs-theme="dark"] {
+  --glass-bg: rgba(15, 23, 42, 0.6);
+  --glass-bg-strong: rgba(15, 23, 42, 0.9);
+  --glass-border: rgba(51, 65, 85, 0.8);
+  --glass-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --glass-hover: rgba(30, 41, 59, 0.8);
+  --glass-input: transparent;
+  --glass-input-focus: rgba(15, 23, 42, 0.5);
+  --glass-input-disabled: rgba(100, 116, 139, 0.2);
+  --glass-input-border: rgba(55, 65, 81, 0.8);
+  --glass-input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  --glass-solid: #1e293b;
+  --navbar-bg: rgba(15, 23, 42, 0.7);
+  --page-base: #0f172a;
+  --page-gradient: radial-gradient(circle at top left, hsl(222 47% 15%), hsl(222 47% 11%));
+  --scroll-thumb: rgba(148, 163, 184, 0.3);
+  --invoice-rule: #6c757d;
+}
+
+body {
+  background-color: var(--page-base);
+  background-image: var(--page-gradient);
+  background-attachment: fixed;
+}
+
+/* Smooth theme change (theme.js adds .preload on first load so nothing animates then) */
+body,
+.card,
+.navbar,
+.modal-content,
+.form-control,
+.form-select,
+.list-group-item,
+footer {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.15s ease;
+}
+.preload * { transition: none !important; }
+
+/* Frosted panels. Blur is only on panels, never on every list row: it is slow. */
+.card,
+.modal-content,
+.dropdown-menu,
+.toast {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Rounder corners. Set through Bootstrap's own variables so the header, footer and body inside
+   follow the same curve. The "inner" radius must be set too: Bootstrap 5.3 builds it from
+   --bs-border-radius, not from the card's own variable, so the header kept a 5px corner and its
+   square tint showed outside the curve. */
+.card {
+  --bs-card-border-radius: 1rem;
+  --bs-card-inner-border-radius: calc(1rem - var(--bs-card-border-width));
+}
+.modal-content {
+  --bs-modal-border-radius: 1rem;
+  --bs-modal-inner-border-radius: calc(1rem - var(--bs-modal-border-width));
+}
+
+.modal-content { background: var(--glass-bg-strong); }
+.modal-backdrop.show { opacity: 0.35; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+
+/* The top bar: frosted glass that follows the theme. The brand and the active tab use the
+   plain text colour (black on light, white on dark), so it reads on both. */
+.navbar.bg-primary {
+  /* !important beats Bootstrap's bg-primary utility, which is itself !important */
+  background-color: var(--navbar-bg) !important;
+  border-bottom: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+}
+.navbar .nav-underline { --bs-nav-underline-link-active-color: var(--bs-emphasis-color); }
+.navbar .nav-link.active { border-bottom-color: var(--bs-emphasis-color); }
+
+/* Lists: rows sit on the glass of whatever holds them */
+.list-group {
+  --bs-list-group-bg: var(--glass-bg);
+  --bs-list-group-border-color: var(--glass-border);
+}
+.list-group-item-action:hover,
+.list-group-item-action:focus { background-color: var(--glass-hover); }
+/* A list inside a card is already on the card's glass; no second box shadow */
+.card > .list-group { box-shadow: none; --bs-list-group-bg: transparent; }
+
+/* Form boxes: transparent with a thin border, like the glass they sit on */
+.form-control,
+.form-select {
+  background-color: var(--glass-input);
+  border-color: var(--glass-input-border);
+  box-shadow: var(--glass-input-shadow);
+}
+.form-control:focus,
+.form-select:focus { background-color: var(--glass-input-focus); }
+.form-control:disabled,
+.form-select:disabled { background-color: var(--glass-input-disabled); }
+
+.alert { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+
+/* A button with a "bi bi-..." class shows its icon before the text (the icon is drawn by
+   ::before, so changing the button's text from script keeps it). */
+.btn.bi::before {
+  margin-right: 0.45em;
+  vertical-align: -0.125em;
+}
+.btn.bi:empty::before { margin-right: 0; }
+
+/* Slim scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background-color: var(--scroll-thumb); border-radius: 8px; }
+
+/* Modals open with a small 3D pop */
+@keyframes modal-open {
+  0% { transform: perspective(800px) rotateX(-15deg) scale(0.9); opacity: 0; }
+  60% { transform: perspective(800px) rotateX(3deg) scale(1.02); opacity: 1; }
+  100% { transform: perspective(800px) rotateX(0deg) scale(1); opacity: 1; }
+}
+.modal.show .modal-dialog { animation: modal-open 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .modal.show .modal-dialog { animation: none; }
+  body, .card, .navbar, .modal-content, .form-control, .form-select, .list-group-item, footer {
+    transition: none;
+  }
+}
+
+/* The "− [ 2 ] +" quantity box of an utang item stays small, even on a wide screen */
+.qty-group { max-width: 190px; }
+
+/* --- Invoice: compact, receipt-like --- */
+.invoice { font-size: 0.875rem; max-width: 420px; margin: 0 auto; }
+.invoice .card-body { padding: 0.75rem; }
+.invoice-store { font-size: 1rem; }
+.invoice-rule { border-bottom: 1px dashed var(--invoice-rule); }
+.invoice-table { width: 100%; border-collapse: collapse; }
+.invoice-table td { padding: 1px 0; vertical-align: top; }
+.invoice-table td.text-end { white-space: nowrap; padding-left: 0.5rem; }
+.invoice-date td {
+  padding-top: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+}
+.invoice-subtotal td { font-size: 0.8125rem; }
+.invoice-heading {
+  margin-top: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed var(--invoice-rule);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+}
+.invoice-totals { margin-top: 0.5rem; border-top: 1px dashed var(--invoice-rule); }
+.invoice-totals td { padding-top: 0.15rem; }
+.invoice-balance td { font-weight: 700; font-size: 1rem; }
+
+/* Printing / Save as PDF: small page (A6, a quarter of a bond paper), no card look.
+   theme.js switches to the light theme while printing, so the ink is dark on white paper. */
+@media print {
+  @page { size: A6; margin: 6mm; }
+  body { background: var(--paper); }
+  main.container { padding: 0 !important; max-width: none !important; }
+  /* Receipt width, even if the phone prints on A4/Letter instead of A6 */
+  .invoice {
+    font-size: 8.5pt;
+    max-width: 93mm;
+    margin: 0 auto;
+    border: 0;
+    box-shadow: none;
+    background: var(--paper);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .invoice .card-body { padding: 0; }
+  .invoice-store, .invoice-balance td { font-size: 10pt; }
+  .invoice-date td, .invoice-heading { font-size: 7.5pt; }
+  .invoice-subtotal td { font-size: 8pt; }
+  .invoice-table tr { break-inside: avoid; }
+}
+
+/* No blur support, or the person asked for less transparency: plain opaque panels */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card, .modal-content, .dropdown-menu, .toast { background: var(--glass-solid); }
+  .navbar.bg-primary { background-color: var(--glass-solid) !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .card, .modal-content, .dropdown-menu, .toast {
+    background: var(--glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .navbar.bg-primary {
+    background-color: var(--glass-solid) !important; -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}

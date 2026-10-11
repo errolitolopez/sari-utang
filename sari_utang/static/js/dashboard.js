@@ -2,7 +2,8 @@
 
 // Builds one list row that opens the customer when tapped.
 // textContent is used (not innerHTML) so names can't inject HTML.
-function listItem(customerId, title, subtitle, amountText, amountClass) {
+// listItem(3, "Aling Nena", "2026-10-10", "₱50.00", "text-danger") -> a row linking to /customers/3
+const listItem = (customerId, title, subtitle, amountText, amountClass) => {
   const li = document.createElement("a");
   li.href = `/customers/${customerId}`;
   li.className =
@@ -25,16 +26,10 @@ function listItem(customerId, title, subtitle, amountText, amountClass) {
 
   li.append(left, amount);
   return li;
-}
+};
 
-function emptyItem(message) {
-  const div = document.createElement("div");
-  div.className = "list-group-item text-body-secondary";
-  div.textContent = message;
-  return div;
-}
-
-function render(data) {
+// render(data) -> the totals, the biggest balances and the recent transactions
+const render = (data) => {
   document.getElementById("total-outstanding").textContent = formatAmount(data.total_outstanding);
   document.getElementById("customers-with-utang").textContent = data.customers_with_utang;
   document.getElementById("customer-count").textContent = data.customer_count;
@@ -50,7 +45,7 @@ function render(data) {
   top.replaceChildren(
     ...(data.top_balances.length
       ? data.top_balances.map((c) => listItem(c.id, c.name, "", formatAmount(c.balance), "text-danger"))
-      : [emptyItem("Walang utang. 🎉")])
+      : [messageItem("Walang utang. 🎉")])
   );
 
   const recent = document.getElementById("recent-transactions");
@@ -67,11 +62,12 @@ function render(data) {
             isUtang ? "text-danger" : "text-success"
           );
         })
-      : [emptyItem("No transactions yet.")])
+      : [messageItem("No transactions yet.")])
   );
-}
+};
 
-async function loadDashboard() {
+// loadDashboard() -> fetches /api/dashboard and fills in the page
+const loadDashboard = async () => {
   try {
     const response = await apiFetch("/api/dashboard");
     if (!response) return;
@@ -83,6 +79,6 @@ async function loadDashboard() {
   } catch {
     showError("dashboard-error", "Cannot reach the server. Check your connection.");
   }
-}
+};
 
 loadDashboard();

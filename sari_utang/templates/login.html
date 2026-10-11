@@ -3,8 +3,8 @@
 {% block title %}Login · Sari Utang{% endblock %}
 
 {% block content %}
-<main class="container d-flex align-items-center justify-content-center min-vh-100">
-  <div class="card shadow-sm w-100" style="max-width: 360px;">
+<main class="container d-flex align-items-center justify-content-center flex-grow-1">
+  <div class="card shadow-sm col-10 col-sm-8 col-md-5 col-lg-4">
     <div class="card-body p-4">
       <h1 class="h4 text-center mb-1">Sari Utang</h1>
       <p class="text-center text-body-secondary mb-4">Enter your PIN</p>
@@ -14,7 +14,7 @@
                inputmode="numeric" pattern="[0-9]*" minlength="4" maxlength="6"
                autocomplete="current-password" placeholder="••••" aria-label="PIN" required autofocus>
         <div id="login-error" class="alert alert-danger py-2 d-none" role="alert"></div>
-        <button id="login-button" type="submit" class="btn btn-primary btn-lg w-100">Login</button>
+        <button id="login-button" type="submit" class="btn btn-primary btn-lg w-100 bi bi-box-arrow-in-right">Login</button>
       </form>
     </div>
   </div>
@@ -22,5 +22,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
 <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 {% endblock %}

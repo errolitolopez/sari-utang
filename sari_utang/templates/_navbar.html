@@ -1,7 +1,7 @@
-<nav class="navbar bg-primary" data-bs-theme="dark">
+<nav class="navbar bg-primary">
   <div class="container">
     <span class="navbar-brand">Sari Utang</span>
-    <button id="logout-button" class="btn btn-outline-light btn-sm">Logout</button>
+    <button id="logout-button" class="btn btn-outline-secondary btn-sm bi bi-box-arrow-right">Logout</button>
   </div>
   <div class="container">
     <ul class="nav nav-underline">
@@ -10,7 +10,7 @@
            href="{{ url_for('dashboard.page') }}">Dashboard</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {{ 'active' if request.endpoint == 'customers.list_page' }}"
+        <a class="nav-link {{ 'active' if request.endpoint in ('customers.list_page', 'customers.detail_page', 'invoices.page') }}"
            href="{{ url_for('customers.list_page') }}">Customers</a>
       </li>
       <li class="nav-item">

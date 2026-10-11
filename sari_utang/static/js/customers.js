@@ -17,7 +17,7 @@ const saveButton = document.getElementById("add-customer-button");
 
 // One row: name and phone on the left, balance on the right. Tapping it opens the customer.
 // textContent is used (not innerHTML) so names can't inject HTML.
-function customerItem(customer) {
+const customerItem = (customer) => {
   const row = document.createElement("a");
   row.href = `/customers/${customer.id}`;
   row.className =
@@ -45,17 +45,10 @@ function customerItem(customer) {
 
   row.append(left, balance);
   return row;
-}
-
-function messageItem(text) {
-  const div = document.createElement("div");
-  div.className = "list-group-item text-body-secondary";
-  div.textContent = text;
-  return div;
-}
+};
 
 // Highest utang first; the server does the sorting, searching and paging.
-function render(data) {
+const render = (data) => {
   if (data.all_count === 0) {
     list.replaceChildren(messageItem("No customers yet. Tap + Add to add one."));
   } else if (data.customers.length === 0) {
@@ -76,10 +69,10 @@ function render(data) {
   document.getElementById("page-info").textContent = `Page ${page} of ${pages}`;
   document.getElementById("prev-page").disabled = page <= 1;
   document.getElementById("next-page").disabled = page >= pages;
-}
+};
 
 // Loads one page of customers from the server.
-async function loadCustomers() {
+const loadCustomers = async () => {
   const thisLoad = ++loadNumber;
   const query = encodeURIComponent(searchInput.value.trim());
   try {
@@ -95,13 +88,14 @@ async function loadCustomers() {
     console.error(error);
     showError("customers-error", "Cannot reach the server. Check your connection.");
   }
-}
+};
 
-function goToPage(newPage) {
+// goToPage(2) -> loads page 2 of the list and scrolls to the top
+const goToPage = (newPage) => {
   page = newPage;
   loadCustomers();
   window.scrollTo({ top: 0 });
-}
+};
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -114,7 +108,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  saveButton.disabled = true;
+  setBusy(saveButton, true);
   try {
     const response = await apiFetch("/api/customers", {
       method: "POST",
@@ -133,7 +127,7 @@ form.addEventListener("submit", async (event) => {
   } catch {
     showError("add-customer-error", "Cannot reach the server. Check your connection.");
   } finally {
-    saveButton.disabled = false;
+    setBusy(saveButton, false);
   }
 });
 

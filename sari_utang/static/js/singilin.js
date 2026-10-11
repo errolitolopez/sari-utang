@@ -7,20 +7,14 @@ let minDays = null; // the selected filter (0 = everyone who owes)
 const list = document.getElementById("singilin-list");
 const filters = document.getElementById("filters");
 
-function makeElement(tag, className, text) {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (text !== undefined) element.textContent = text; // textContent: names can't inject HTML
-  return element;
-}
-
-function daysText(days) {
+// daysText(0) -> "today", daysText(1) -> "1 day", daysText(40) -> "40 days"
+const daysText = (days) => {
   if (days === 0) return "today";
   return days === 1 ? "1 day" : `${days} days`;
-}
+};
 
 // One customer. Red when the utang has waited "overdueDays" or longer. Tap to open.
-function customerRow(customer) {
+const customerRow = (customer) => {
   const isOverdue = customer.days >= overdueDays;
   const row = makeElement("a", "list-group-item list-group-item-action");
   row.href = `/customers/${customer.id}`;
@@ -46,9 +40,10 @@ function customerRow(customer) {
   );
   row.append(top, bottom, makeElement("div", "small text-body-secondary", details.join(" · ")));
   return row;
-}
+};
 
-function renderFilters() {
+// renderFilters() -> the "Lahat (5)" / "30+ araw (2)" buttons
+const renderFilters = () => {
   // 7, 15, 30 days plus the configured number, without duplicates, smallest first.
   const options = [...new Set([0, 7, 15, 30, overdueDays])].sort((a, b) => a - b);
   filters.replaceChildren(
@@ -69,9 +64,10 @@ function renderFilters() {
       return button;
     })
   );
-}
+};
 
-function render() {
+// render() -> the filter buttons, the summary line, the ZIP link and the rows
+const render = () => {
   renderFilters();
   const shown = customers.filter((c) => c.days >= minDays);
   const total = shown.reduce((sum, c) => sum + c.balance, 0);
@@ -92,9 +88,10 @@ function render() {
     const message = customers.length ? "Walang utang na ganito katagal. 🎉" : "Walang utang. 🎉";
     list.replaceChildren(makeElement("div", "list-group-item text-body-secondary", message));
   }
-}
+};
 
-async function loadList() {
+// loadList() -> fetches /api/singilin and draws it
+const loadList = async () => {
   try {
     const response = await apiFetch("/api/singilin");
     if (!response) return;
@@ -111,6 +108,6 @@ async function loadList() {
     console.error(error); // shows the real cause in the browser console (F12)
     showError("singilin-error", "Cannot reach the server. Check your connection.");
   }
-}
+};
 
 loadList();

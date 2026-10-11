@@ -19,49 +19,43 @@ const saveButton = document.getElementById("save-utang-button");
 // --- Small helpers -----------------------------------------------------------
 
 // "12.5" -> 1250 centavos, or null if it is not a valid price.
-function parsePrice(text) {
+const parsePrice = (text) => {
   const cleaned = text.replace(/,/g, "").trim();
   if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
   return Math.round(Number(cleaned) * 100);
-}
+};
 
 const MAX_QUANTITY = 10000; // same limit as the server
 
 // "0.5" -> 0.5, or null if it is not a valid quantity (more than 0, up to 3 decimals).
-function parseQuantity(text) {
+const parseQuantity = (text) => {
   const cleaned = String(text).trim();
   if (!/^\d+(\.\d{1,3})?$/.test(cleaned)) return null;
   const quantity = Number(cleaned);
   return quantity > 0 && quantity <= MAX_QUANTITY ? quantity : null;
-}
+};
 
 // Adding 1 to 0.1 can give 1.1000000000000001 in JavaScript, so round to 3 decimals.
-function roundQuantity(quantity) {
+const roundQuantity = (quantity) => {
   return Number(quantity.toFixed(3));
-}
+};
 
 // Preview only; the server computes the real amounts when saving.
-function lineAmount(line) {
+const lineAmount = (line) => {
   return Math.round(line.price * line.quantity);
-}
+};
 
 // "2 pc Coke Mismo", "0.5 kg Bigas", "1 × Yelo" (typed-in items have no unit)
-function describeItem(item) {
+const describeItem = (item) => {
   return item.unit
     ? `${item.quantity} ${item.unit} ${item.name}`
     : `${item.quantity} × ${item.name}`;
-}
-
-function makeElement(tag, className, text) {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (text !== undefined) element.textContent = text; // textContent: names can't inject HTML
-  return element;
-}
+};
 
 // --- Customer and history ----------------------------------------------------
 
-function renderCustomer(customer) {
+// renderCustomer({ name: "Aling Nena", balance: 5000 }) -> name, phone and balance at the top
+const renderCustomer = (customer) => {
   document.title = `${customer.name} · Sari Utang`;
   document.getElementById("customer-name").textContent = customer.name;
   document.getElementById("customer-phone").textContent = customer.phone || "";
@@ -72,16 +66,16 @@ function renderCustomer(customer) {
   balance = customer.balance;
   // Nothing to pay when there is no utang.
   document.getElementById("add-payment-button").disabled = balance <= 0;
-}
+};
 
 // What an entry is about: "2 bottle Coke Mismo, 0.5 kg Bigas" or "Bayad".
-function describeTransaction(transaction) {
+const describeTransaction = (transaction) => {
   if (transaction.items.length) return transaction.items.map(describeItem).join(", ");
   return transaction.type === "utang" ? "Utang" : "Bayad";
-}
+};
 
 // One line per entry in the history. Tap it to see the details.
-function historyItem(transaction) {
+const historyItem = (transaction) => {
   const isUtang = transaction.type === "utang";
   const isVoided = transaction.voided_at !== null;
   const row = makeElement(
@@ -114,7 +108,7 @@ function historyItem(transaction) {
   }
   row.addEventListener("click", () => openDetails(transaction));
   return row;
-}
+};
 
 // --- Details (view only) -----------------------------------------------------
 
@@ -123,7 +117,7 @@ const detailsModal = bootstrap.Modal.getOrCreateInstance(detailsModalElement);
 let detailsTransaction = null; // the entry shown in the details popup
 
 // One item: "Coke Mismo" / "2 bottle × ₱20.00" on the left, the amount on the right.
-function detailsItem(item) {
+const detailsItem = (item) => {
   const li = makeElement("li", "list-group-item d-flex justify-content-between align-items-center");
   const left = makeElement("div");
   const quantity = item.unit ? `${item.quantity} ${item.unit}` : `${item.quantity}`;
@@ -133,9 +127,10 @@ function detailsItem(item) {
   );
   li.append(left, makeElement("span", "fw-semibold", formatAmount(item.amount)));
   return li;
-}
+};
 
-function openDetails(transaction) {
+// openDetails(transaction) -> the popup with the items, note and void info of one entry
+const openDetails = (transaction) => {
   detailsTransaction = transaction;
   const isUtang = transaction.type === "utang";
   const isVoided = transaction.voided_at !== null;
@@ -176,7 +171,7 @@ function openDetails(transaction) {
   // Already voided entries can't be voided again.
   document.getElementById("details-void-button").classList.toggle("d-none", isVoided);
   detailsModal.show();
-}
+};
 
 // Void from the details: close the details first, then open the void popup.
 document.getElementById("details-void-button").addEventListener("click", () => {
@@ -188,7 +183,8 @@ document.getElementById("details-void-button").addEventListener("click", () => {
   detailsModal.hide();
 });
 
-async function loadCustomer() {
+// loadCustomer() -> fetches the balance and history, then draws them (also after every save)
+const loadCustomer = async () => {
   try {
     const response = await apiFetch(`/api/customers/${customerId}/transactions`);
     if (!response) return;
@@ -207,11 +203,12 @@ async function loadCustomer() {
   } catch {
     showError("customer-error", "Cannot reach the server. Check your connection.");
   }
-}
+};
 
 // --- Utang form --------------------------------------------------------------
 
-function renderResults() {
+// renderResults() -> the products matching the search box, e.g. "coke" -> 2 rows to tap
+const renderResults = () => {
   const query = searchInput.value.trim().toLowerCase();
   if (!query) {
     results.replaceChildren();
@@ -239,10 +236,10 @@ function renderResults() {
       return button;
     })
   );
-}
+};
 
 // Tapping a product adds 1; tapping it again adds 1 more to the same line.
-function addProduct(product) {
+const addProduct = (product) => {
   const existing = lines.find((line) => line.productId === product.id);
   if (existing) {
     existing.quantity = Math.min(roundQuantity((existing.quantity || 0) + 1), MAX_QUANTITY);
@@ -259,9 +256,10 @@ function addProduct(product) {
   renderResults();
   renderLines();
   searchInput.focus();
-}
+};
 
-function addOtherItem() {
+// addOtherItem() -> adds the typed "Yelo" ₱5.00 as an item that is not in the product list
+const addOtherItem = () => {
   hideError("utang-error");
   const name = otherName.value.trim();
   const price = parsePrice(otherPrice.value);
@@ -279,15 +277,17 @@ function addOtherItem() {
   otherName.value = "";
   otherPrice.value = "";
   renderLines();
-}
+};
 
-function renderTotal() {
+// renderTotal() -> "₱45.00", or "—" while a quantity is wrong
+const renderTotal = () => {
   const allValid = lines.every((line) => line.quantity !== null);
   const total = lines.reduce((sum, line) => sum + (line.quantity ? lineAmount(line) : 0), 0);
   document.getElementById("utang-total").textContent = allValid ? formatAmount(total) : "—";
-}
+};
 
-function lineItem(line, index) {
+// lineItem(line, index) -> one item of the utang with − / + buttons and its amount
+const lineItem = (line, index) => {
   const li = makeElement("li", "list-group-item");
 
   const top = makeElement("div", "d-flex justify-content-between align-items-start");
@@ -308,8 +308,7 @@ function lineItem(line, index) {
 
   // − [ 2 ] + : the buttons change the quantity by 1. Decimals like 0.5 can be typed.
   const bottom = makeElement("div", "d-flex justify-content-between align-items-center mt-2");
-  const group = makeElement("div", "input-group input-group-sm");
-  group.style.maxWidth = "190px";
+  const group = makeElement("div", "input-group input-group-sm qty-group");
 
   const minus = makeElement("button", "btn btn-outline-secondary", "−");
   minus.type = "button";
@@ -326,20 +325,20 @@ function lineItem(line, index) {
   const amount = makeElement("span", "fw-semibold");
 
   // Shows the quantity's amount, marks a wrong quantity red, and updates the total.
-  function refresh() {
+  const refresh = () => {
     const valid = line.quantity !== null;
     quantityInput.classList.toggle("is-invalid", !valid);
     amount.textContent = valid ? formatAmount(lineAmount(line)) : "—";
     minus.disabled = !valid || line.quantity <= 1;
     plus.disabled = valid && line.quantity >= MAX_QUANTITY;
     renderTotal();
-  }
+  };
 
-  function setQuantity(quantity) {
+  const setQuantity = (quantity) => {
     line.quantity = quantity;
     quantityInput.value = quantity;
     refresh();
-  }
+  };
 
   // − never goes to 0 or below: it is greyed out at 1 or less (refresh() above).
   minus.addEventListener("click", () => {
@@ -358,18 +357,20 @@ function lineItem(line, index) {
 
   li.append(top, bottom);
   return li;
-}
+};
 
-function renderLines() {
+// renderLines() -> the items of the utang being made, or an empty-state row
+const renderLines = () => {
   linesList.replaceChildren(
     ...(lines.length
       ? lines.map(lineItem)
       : [makeElement("li", "list-group-item text-body-secondary", "No items yet. Search a product above.")])
   );
   renderTotal();
-}
+};
 
-async function openUtangForm() {
+// openUtangForm() -> empty form, then loads the product list for the search
+const openUtangForm = async () => {
   lines = [];
   noteInput.value = "";
   searchInput.value = "";
@@ -388,7 +389,7 @@ async function openUtangForm() {
   } catch {
     showError("utang-error", "Cannot reach the server. Check your connection.");
   }
-}
+};
 
 document.getElementById("utang-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -409,7 +410,7 @@ document.getElementById("utang-form").addEventListener("submit", async (event) =
       : { name: line.name, price: line.price, quantity: line.quantity }
   );
 
-  saveButton.disabled = true;
+  setBusy(saveButton, true);
   try {
     const response = await apiFetch("/api/transactions", {
       method: "POST",
@@ -432,7 +433,7 @@ document.getElementById("utang-form").addEventListener("submit", async (event) =
   } catch {
     showError("utang-error", "Cannot reach the server. Check your connection.");
   } finally {
-    saveButton.disabled = false;
+    setBusy(saveButton, false);
   }
 });
 
@@ -445,7 +446,7 @@ const savePaymentButton = document.getElementById("save-payment-button");
 
 // Shows what will be left after this payment as you type.
 // Paying more than the utang counts as paid in full; the extra is the sukli.
-function renderRemaining() {
+const renderRemaining = () => {
   const amount = parsePrice(paymentAmount.value);
   const remaining = document.getElementById("payment-remaining");
   const changeRow = document.getElementById("payment-change-row");
@@ -462,21 +463,23 @@ function renderRemaining() {
 
   changeRow.classList.toggle("d-none", change <= 0);
   document.getElementById("payment-change").textContent = change > 0 ? formatAmount(change) : "";
-}
+};
 
-function showMessage(message) {
+// showMessage("Bayad ₱50.00 saved.") -> the green note at the top of the page
+const showMessage = (message) => {
   document.getElementById("customer-message-text").textContent = message;
   document.getElementById("customer-message").classList.remove("d-none");
-}
+};
 
-function openPaymentForm() {
+// openPaymentForm() -> the payment popup, with what the customer owes now
+const openPaymentForm = () => {
   document.getElementById("payment-owed").textContent = formatAmount(balance);
   paymentAmount.value = "";
   paymentNote.value = "";
   hideError("payment-error");
   renderRemaining();
   paymentModal.show();
-}
+};
 
 document.getElementById("pay-full-button").addEventListener("click", () => {
   paymentAmount.value = (balance / 100).toFixed(2);
@@ -494,7 +497,7 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
     return;
   }
 
-  savePaymentButton.disabled = true;
+  setBusy(savePaymentButton, true);
   try {
     const response = await apiFetch("/api/transactions", {
       method: "POST",
@@ -522,7 +525,7 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
   } catch {
     showError("payment-error", "Cannot reach the server. Check your connection.");
   } finally {
-    savePaymentButton.disabled = false;
+    setBusy(savePaymentButton, false);
   }
 });
 
@@ -537,7 +540,8 @@ const voidReason = document.getElementById("void-reason");
 const confirmVoidButton = document.getElementById("confirm-void-button");
 let voidingId = null; // the transaction shown in the void popup
 
-function openVoidForm(transaction) {
+// openVoidForm(transaction) -> the void popup for that utang or payment
+const openVoidForm = (transaction) => {
   voidingId = transaction.id;
   const isUtang = transaction.type === "utang";
   const summary = document.getElementById("void-summary");
@@ -553,13 +557,13 @@ function openVoidForm(transaction) {
   voidReason.value = "";
   hideError("void-error");
   voidModal.show();
-}
+};
 
 document.getElementById("void-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   hideError("void-error");
 
-  confirmVoidButton.disabled = true;
+  setBusy(confirmVoidButton, true);
   try {
     const response = await apiFetch(`/api/transactions/${voidingId}/void`, {
       method: "POST",
@@ -577,7 +581,7 @@ document.getElementById("void-form").addEventListener("submit", async (event) =>
   } catch {
     showError("void-error", "Cannot reach the server. Check your connection.");
   } finally {
-    confirmVoidButton.disabled = false;
+    setBusy(confirmVoidButton, false);
   }
 });
 

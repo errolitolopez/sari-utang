@@ -2,160 +2,130 @@
 
 {% block title %}Invoice · {{ customer.name }}{% endblock %}
 
-{% block head %}
-<style>
-  /* Compact, receipt-like invoice */
-  .invoice { font-size: 0.875rem; max-width: 420px; margin: 0 auto; }
-  .invoice .card-body { padding: 0.75rem; }
-  .invoice-store { font-size: 1rem; }
-  .invoice-rule { border-bottom: 1px dashed #adb5bd; }
-  .invoice-table { width: 100%; border-collapse: collapse; }
-  .invoice-table td { padding: 1px 0; vertical-align: top; }
-  .invoice-table td.text-end { white-space: nowrap; padding-left: 0.5rem; }
-  .invoice-date td { padding-top: 0.4rem; font-size: 0.75rem; font-weight: 600; color: #6c757d; }
-  .invoice-subtotal td { font-size: 0.8125rem; }
-  .invoice-heading { margin-top: 0.5rem; padding-top: 0.25rem; border-top: 1px dashed #adb5bd;
-                     font-size: 0.75rem; font-weight: 600; color: #6c757d; }
-  .invoice-totals { margin-top: 0.5rem; border-top: 1px dashed #adb5bd; }
-  .invoice-totals td { padding-top: 0.15rem; }
-  .invoice-balance td { font-weight: 700; font-size: 1rem; }
-
-  /* Printing / Save as PDF: small page (A6, a quarter of a bond paper), no card look */
-  @media print {
-    @page { size: A6; margin: 6mm; }
-    html, body, body.bg-body-tertiary { background: #fff !important; }
-    main.container { padding: 0 !important; max-width: none !important; }
-    /* Receipt width, even if the phone prints on A4/Letter instead of A6 */
-    .invoice { font-size: 8.5pt; max-width: 93mm; margin: 0 auto; border: 0; box-shadow: none; }
-    .invoice .card-body { padding: 0; }
-    .invoice-store, .invoice-balance td { font-size: 10pt; }
-    .invoice-date td, .invoice-heading { font-size: 7.5pt; }
-    .invoice-subtotal td { font-size: 8pt; }
-    .invoice-table tr { break-inside: avoid; }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="d-print-none">{% include "_navbar.html" %}</div>
 
-<main class="container py-3" style="max-width: 720px;">
-  <!-- Buttons (hidden when printing) -->
-  <div class="d-print-none mb-3">
-    <a href="{{ url_for('customers.detail_page', customer_id=customer.id) }}" class="btn btn-link px-0 mb-2">← {{ customer.name }}</a>
-    <div class="d-flex flex-wrap gap-2">
-      <a href="{{ url_for('invoices.pdf', customer_id=customer.id) }}" class="btn btn-primary" download>Download PDF</a>
-      <button id="print-button" type="button" class="btn btn-outline-primary">Print</button>
-      <button id="copy-button" type="button" class="btn btn-outline-primary">Copy as text</button>
-      {% if sms_link %}
-      <a href="{{ sms_link }}" class="btn btn-outline-primary">Send via SMS</a>
-      {% endif %}
-    </div>
-    <div id="copy-message" class="small text-success mt-1 d-none">Copied! Paste it in Messenger or Viber.</div>
-    <!-- Fallback if copying is not allowed: the text is shown here to copy by hand -->
-    <textarea id="invoice-text" class="form-control mt-2 d-none" rows="8" readonly>{{ text }}</textarea>
-  </div>
-
-  <div class="d-print-none form-check mb-2">
-    <input class="form-check-input" type="checkbox" id="show-summary">
-    <label class="form-check-label small" for="show-summary">Include summary by product</label>
-  </div>
-
-  <!-- The invoice itself: compact, receipt-like -->
-  <div class="invoice card">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-baseline">
-        <div class="fw-bold invoice-store">{{ store_name }}</div>
-        <div class="text-body-secondary">{{ today }}</div>
-      </div>
-      <div class="d-flex justify-content-between align-items-baseline invoice-rule pb-1 mb-1">
-        <div>Utang ni <span class="fw-semibold">{{ customer.name }}</span></div>
-        {% if customer.phone %}<div class="text-body-secondary">{{ customer.phone }}</div>{% endif %}
+<main class="container py-3">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <!-- Buttons (hidden when printing) -->
+      <div class="d-print-none mb-3">
+        <a href="{{ url_for('customers.detail_page', customer_id=customer.id) }}" class="btn btn-link px-0 mb-2 bi bi-arrow-left">{{ customer.name }}</a>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{{ url_for('invoices.pdf', customer_id=customer.id) }}" class="btn btn-primary bi bi-download" download>Download PDF</a>
+          <button id="print-button" type="button" class="btn btn-outline-primary bi bi-printer">Print</button>
+          <button id="copy-button" type="button" class="btn btn-outline-primary bi bi-clipboard">Copy as text</button>
+          {% if sms_link %}
+          <a href="{{ sms_link }}" class="btn btn-outline-primary bi bi-chat-dots">Send via SMS</a>
+          {% endif %}
+        </div>
+        <div id="copy-message" class="small text-success mt-1 d-none">Copied! Paste it in Messenger or Viber.</div>
+        <!-- Fallback if copying is not allowed: the text is shown here to copy by hand -->
+        <textarea id="invoice-text" class="form-control mt-2 d-none" rows="8" readonly>{{ text }}</textarea>
       </div>
 
-      {% if not invoice.entries %}
-      <div class="py-2">Walang utang. Bayad na lahat. 🎉</div>
-      {% else %}
-
-      <!-- Unpaid utang, oldest first. One line per item. -->
-      <table class="invoice-table">
-        <tbody>
-          {% for entry in invoice.entries %}
-          <tr class="invoice-date">
-            <td colspan="2">
-              {{ entry.date[:10] }}{% if entry.note %} · <span class="fst-italic">{{ entry.note }}</span>{% endif %}
-            </td>
-          </tr>
-          {% for item in entry["items"] %}
-          <tr>
-            <td>
-              {{ item.name }}
-              <span class="text-body-secondary">· {{ item.quantity|qty }}{% if item.unit %} {{ item.unit }}{% endif %} × {{ item.price|peso }}</span>
-            </td>
-            <td class="text-end">{{ item.amount|peso }}</td>
-          </tr>
-          {% endfor %}
-          {% if entry["items"]|length > 1 %}
-          <tr class="invoice-subtotal">
-            <td class="text-end text-body-secondary">Subtotal</td>
-            <td class="text-end fw-semibold">{{ entry.amount|peso }}</td>
-          </tr>
-          {% endif %}
-          {% if entry.paid %}
-          <!-- Part of this utang was already paid (payments pay the oldest utang first) -->
-          <tr class="invoice-subtotal">
-            <td class="text-end text-body-secondary">Bayad na (partial)</td>
-            <td class="text-end">−{{ entry.paid|peso }}</td>
-          </tr>
-          <tr class="invoice-subtotal">
-            <td class="text-end text-body-secondary">Natitira</td>
-            <td class="text-end fw-semibold">{{ entry.remaining|peso }}</td>
-          </tr>
-          {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <!-- Total per product (only when the checkbox is ticked) -->
-      {% if invoice.products %}
-      <div id="product-summary" class="d-none">
-        <div class="invoice-heading">Summary by product</div>
-        <table class="invoice-table">
-          <tbody>
-            {% for product in invoice.products %}
-            <tr>
-              <td>{{ product.name }} <span class="text-body-secondary">· {{ product.quantity|qty }} {{ product.unit or "×" }}</span></td>
-              <td class="text-end">{{ product.amount|peso }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="d-print-none form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="show-summary">
+        <label class="form-check-label small" for="show-summary">Include summary by product</label>
       </div>
-      {% endif %}
 
-      <!-- Totals -->
-      <table class="invoice-table invoice-totals">
-        <tbody>
-          <tr>
-            <td>Total utang</td>
-            <td class="text-end">{{ invoice.total_utang|peso }}</td>
-          </tr>
-          {% if invoice.partly_paid %}
-          <tr>
-            <td>Bayad na (partial)</td>
-            <td class="text-end">−{{ invoice.partly_paid|peso }}</td>
-          </tr>
+      <!-- The invoice itself: compact, receipt-like -->
+      <div class="invoice card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-baseline">
+            <div class="fw-bold invoice-store">{{ store_name }}</div>
+            <div class="text-body-secondary">{{ today }}</div>
+          </div>
+          <div class="d-flex justify-content-between align-items-baseline invoice-rule pb-1 mb-1">
+            <div>Utang ni <span class="fw-semibold">{{ customer.name }}</span></div>
+            {% if customer.phone %}<div class="text-body-secondary">{{ customer.phone }}</div>{% endif %}
+          </div>
+
+          {% if not invoice.entries %}
+          <div class="py-2">Walang utang. Bayad na lahat. 🎉</div>
+          {% else %}
+
+          <!-- Unpaid utang, oldest first. One line per item. -->
+          <table class="invoice-table">
+            <tbody>
+              {% for entry in invoice.entries %}
+              <tr class="invoice-date">
+                <td colspan="2">
+                  {{ entry.date[:10] }}{% if entry.note %} · <span class="fst-italic">{{ entry.note }}</span>{% endif %}
+                </td>
+              </tr>
+              {% for item in entry["items"] %}
+              <tr>
+                <td>
+                  {{ item.name }}
+                  <span class="text-body-secondary">· {{ item.quantity|qty }}{% if item.unit %} {{ item.unit }}{% endif %} × {{ item.price|peso }}</span>
+                </td>
+                <td class="text-end">{{ item.amount|peso }}</td>
+              </tr>
+              {% endfor %}
+              {% if entry["items"]|length > 1 %}
+              <tr class="invoice-subtotal">
+                <td class="text-end text-body-secondary">Subtotal</td>
+                <td class="text-end fw-semibold">{{ entry.amount|peso }}</td>
+              </tr>
+              {% endif %}
+              {% if entry.paid %}
+              <!-- Part of this utang was already paid (payments pay the oldest utang first) -->
+              <tr class="invoice-subtotal">
+                <td class="text-end text-body-secondary">Bayad na (partial)</td>
+                <td class="text-end">−{{ entry.paid|peso }}</td>
+              </tr>
+              <tr class="invoice-subtotal">
+                <td class="text-end text-body-secondary">Natitira</td>
+                <td class="text-end fw-semibold">{{ entry.remaining|peso }}</td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <!-- Total per product (only when the checkbox is ticked) -->
+          {% if invoice.products %}
+          <div id="product-summary" class="d-none">
+            <div class="invoice-heading">Summary by product</div>
+            <table class="invoice-table">
+              <tbody>
+                {% for product in invoice.products %}
+                <tr>
+                  <td>{{ product.name }} <span class="text-body-secondary">· {{ product.quantity|qty }} {{ product.unit or "×" }}</span></td>
+                  <td class="text-end">{{ product.amount|peso }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
           {% endif %}
-          <tr class="invoice-balance">
-            <td>Balance</td>
-            <td class="text-end">{{ invoice.balance|peso }}</td>
-          </tr>
-        </tbody>
-      </table>
-      {% if invoice.last_payment %}
-      <div class="text-body-secondary mt-1" style="font-size: 0.75em;">Huling bayad: {{ invoice.last_payment[:10] }}</div>
-      {% endif %}
-      {% endif %}
+
+          <!-- Totals -->
+          <table class="invoice-table invoice-totals">
+            <tbody>
+              <tr>
+                <td>Total utang</td>
+                <td class="text-end">{{ invoice.total_utang|peso }}</td>
+              </tr>
+              {% if invoice.partly_paid %}
+              <tr>
+                <td>Bayad na (partial)</td>
+                <td class="text-end">−{{ invoice.partly_paid|peso }}</td>
+              </tr>
+              {% endif %}
+              <tr class="invoice-balance">
+                <td>Balance</td>
+                <td class="text-end">{{ invoice.balance|peso }}</td>
+              </tr>
+            </tbody>
+          </table>
+          {% if invoice.last_payment %}
+          <div class="small text-body-secondary mt-1">Huling bayad: {{ invoice.last_payment[:10] }}</div>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
     </div>
   </div>
 </main>

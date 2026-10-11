@@ -2,25 +2,19 @@
 
 const form = document.getElementById("login-form");
 const pinInput = document.getElementById("pin");
-const errorBox = document.getElementById("login-error");
 const button = document.getElementById("login-button");
-
-function showError(message) {
-  errorBox.textContent = message;
-  errorBox.classList.remove("d-none");
-}
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  errorBox.classList.add("d-none");
+  hideError("login-error");
 
   const pin = pinInput.value.trim();
   if (!/^\d{4,6}$/.test(pin)) {
-    showError("PIN must be 4 to 6 digits.");
+    showError("login-error", "PIN must be 4 to 6 digits.");
     return;
   }
 
-  button.disabled = true;
+  setBusy(button, true);
   try {
     const response = await fetch("/api/login", {
       method: "POST",
@@ -33,11 +27,11 @@ form.addEventListener("submit", async (event) => {
       return;
     }
     const data = await response.json();
-    showError(data.error || "Login failed.");
+    showError("login-error", data.error || "Login failed.");
   } catch {
-    showError("Cannot reach the server. Check your connection.");
+    showError("login-error", "Cannot reach the server. Check your connection.");
   } finally {
-    button.disabled = false;
+    setBusy(button, false);
     pinInput.value = "";
     pinInput.focus();
   }
