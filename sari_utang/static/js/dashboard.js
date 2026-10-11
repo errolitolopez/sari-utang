@@ -36,10 +36,6 @@ const render = (data) => {
   document.getElementById("overdue-days").textContent = data.overdue_days;
   document.getElementById("overdue-count").textContent =
     data.overdue_count === 1 ? "1 customer" : `${data.overdue_count} customers`;
-  // Highlight the card only when someone needs to be reminded.
-  const card = document.getElementById("overdue-card");
-  card.classList.toggle("border-warning", data.overdue_count > 0);
-  card.classList.toggle("text-bg-warning", data.overdue_count > 0);
 
   const top = document.getElementById("top-balances");
   top.replaceChildren(
