@@ -32,7 +32,10 @@ app = Flask(__name__, instance_relative_config=True)
 
 # The instance/ folder holds private files (database, secret key). It is not committed to git.
 os.makedirs(app.instance_path, exist_ok=True)
-app.config["DATABASE"] = os.path.join(app.instance_path, "sari_utang.db")
+# SARI_UTANG_DATABASE lets the tests use a throwaway database.
+app.config["DATABASE"] = os.environ.get(
+    "SARI_UTANG_DATABASE", os.path.join(app.instance_path, "sari_utang.db")
+)
 
 # Stay logged in for 30 days so the PIN isn't asked every time.
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
