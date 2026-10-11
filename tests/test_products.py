@@ -77,4 +77,6 @@ def test_update_to_a_taken_name_and_unit(client):
 
 
 def test_products_page_renders_the_unit_choices(client):
-    assert "kg (kilo)" in client.get("/products").get_data(as_text=True)
+    from sari_utang import config
+    text = next(iter(config.load_units().values()))  # the store's own units.json is used
+    assert text in client.get("/products").get_data(as_text=True)

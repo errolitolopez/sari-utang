@@ -34,10 +34,10 @@ def pdf(customer_id):
 @bp.get("/singilin/invoices.zip")
 @login_required_page
 def zip_download():
-    """One PDF invoice per customer with utang, in one ZIP.
+    """One PDF invoice per customer with debt, in one ZIP.
 
-    ?min_days=30 only includes customers whose oldest unpaid utang is 30+ days old
-    (the same filter as the Singilin page). Without it, everyone with utang.
+    ?min_days=30 only includes customers whose oldest unpaid debt is 30+ days old
+    (the same filter as the Collections page). Without it, everyone with debt.
     """
     data, filename = InvoiceService(get_db()).zip_of_all(request.args.get("min_days", default=0, type=int))
     return send_file(io.BytesIO(data), mimetype="application/zip", as_attachment=True,

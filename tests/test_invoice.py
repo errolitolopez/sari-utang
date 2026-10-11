@@ -25,13 +25,13 @@ def test_invoice_page_lists_only_unpaid_utang(client):
     assert "Itlog" in html
     assert "Asin" not in html
     assert "₱31.00" in html  # 3600 - 500 left
-    assert "bayad na" in html
+    assert "already paid" in html
 
 
 def test_invoice_page_when_all_paid(client):
     customer = add_customer(client)
     html = client.get(f"/customers/{customer['id']}/invoice").get_data(as_text=True)
-    assert "Walang utang. Bayad na lahat." in html
+    assert "No debt. All paid." in html
 
 
 def test_invoice_sms_link_needs_a_phone(client):

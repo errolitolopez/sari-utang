@@ -1,9 +1,9 @@
-// One customer: shows their balance and history, and adds new utang.
+// One customer: shows their balance and history, and adds new debt.
 
 const customerId = Number(document.getElementById("customer-page").dataset.customerId);
 
-let products = []; // product list, loaded when the utang form opens
-let lines = []; // items in the utang being made: {productId, name, unit, price, quantity}
+let products = []; // product list, loaded when the debt form opens
+let lines = []; // items in the debt being made: {productId, name, unit, price, quantity}
 let balance = 0; // what the customer owes now, in centavos
 
 const modalElement = document.getElementById("utang-modal");
@@ -45,7 +45,7 @@ const lineAmount = (line) => {
   return Math.round(line.price * line.quantity);
 };
 
-// "2 pc Coke Mismo", "0.5 kg Bigas", "1 × Yelo" (typed-in items have no unit)
+// "2 pc Coke Mismo", "0.5 kg Rice", "1 × Yelo" (typed-in items have no unit)
 const describeItem = (item) => {
   return item.unit
     ? `${item.quantity} ${item.unit} ${item.name}`
@@ -64,11 +64,11 @@ const renderCustomer = (customer) => {
   balanceText.className = `fs-3 fw-bold ${customer.balance > 0 ? "text-danger" : "text-success"}`;
 
   balance = customer.balance;
-  // Nothing to pay when there is no utang.
+  // Nothing to pay when there is no debt.
   document.getElementById("add-payment-button").disabled = balance <= 0;
 };
 
-// What an entry is about: "2 bottle Coke Mismo, 0.5 kg Bigas" or "Bayad".
+// What an entry is about: "2 bottle Coke Mismo, 0.5 kg Rice" or "Payment".
 const describeTransaction = (transaction) => {
   if (transaction.items.length) return transaction.items.map(describeItem).join(", ");
   return transaction.type === "utang" ? "Utang" : "Bayad";
@@ -156,13 +156,13 @@ const openDetails = (transaction) => {
     ? "text-decoration-line-through text-body-secondary"
     : isUtang ? "text-danger" : "text-success";
 
-  // Payments with sukli: show the cash received and the change.
+  // Payments with change: show the cash received and the change.
   const cash = document.getElementById("details-cash");
   cash.classList.toggle("d-none", !transaction.tendered);
   if (transaction.tendered) {
     cash.textContent =
-      `Natanggap ${formatAmount(transaction.tendered)} · ` +
-      `Sukli ${formatAmount(transaction.tendered - transaction.amount)}`;
+      `Received ${formatAmount(transaction.tendered)} · ` +
+      `Change ${formatAmount(transaction.tendered - transaction.amount)}`;
   }
 
   document.getElementById("details-note").classList.toggle("d-none", !transaction.note);
@@ -198,14 +198,14 @@ const loadCustomer = async () => {
     history.replaceChildren(
       ...(data.transactions.length
         ? data.transactions.map(historyItem)
-        : [makeElement("div", "list-group-item text-body-secondary", "No utang yet.")])
+        : [makeElement("div", "list-group-item text-body-secondary", "No debt yet.")])
     );
   } catch {
     showError("customer-error", "Cannot reach the server. Check your connection.");
   }
 };
 
-// --- Utang form --------------------------------------------------------------
+// --- Debt form --------------------------------------------------------------
 
 // renderResults() -> the products matching the search box, e.g. "coke" -> 2 rows to tap
 const renderResults = () => {
@@ -286,7 +286,7 @@ const renderTotal = () => {
   document.getElementById("utang-total").textContent = allValid ? formatAmount(total) : "—";
 };
 
-// lineItem(line, index) -> one item of the utang with − / + buttons and its amount
+// lineItem(line, index) -> one item of the debt with − / + buttons and its amount
 const lineItem = (line, index) => {
   const li = makeElement("li", "list-group-item");
 
@@ -359,7 +359,7 @@ const lineItem = (line, index) => {
   return li;
 };
 
-// renderLines() -> the items of the utang being made, or an empty-state row
+// renderLines() -> the items of the debt being made, or an empty-state row
 const renderLines = () => {
   linesList.replaceChildren(
     ...(lines.length
@@ -425,7 +425,7 @@ document.getElementById("utang-form").addEventListener("submit", async (event) =
     if (!response) return;
     const data = await response.json();
     if (!response.ok) {
-      showError("utang-error", data.error || "Could not save the utang.");
+      showError("utang-error", data.error || "Could not save the debt.");
       return;
     }
     modal.hide();
@@ -445,7 +445,7 @@ const paymentNote = document.getElementById("payment-note");
 const savePaymentButton = document.getElementById("save-payment-button");
 
 // Shows what will be left after this payment as you type.
-// Paying more than the utang counts as paid in full; the extra is the sukli.
+// Paying more than the debt counts as paid in full; the extra is the change.
 const renderRemaining = () => {
   const amount = parsePrice(paymentAmount.value);
   const remaining = document.getElementById("payment-remaining");
@@ -518,7 +518,7 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
     paymentModal.hide();
     showMessage(
       data.change > 0
-        ? `Bayad lahat ${formatAmount(data.transaction.amount)} · Sukli ${formatAmount(data.change)}`
+        ? `Paid in full ${formatAmount(data.transaction.amount)} · Change ${formatAmount(data.change)}`
         : `Bayad ${formatAmount(data.transaction.amount)} saved.`
     );
     await loadCustomer();
@@ -540,7 +540,7 @@ const voidReason = document.getElementById("void-reason");
 const confirmVoidButton = document.getElementById("confirm-void-button");
 let voidingId = null; // the transaction shown in the void popup
 
-// openVoidForm(transaction) -> the void popup for that utang or payment
+// openVoidForm(transaction) -> the void popup for that debt or payment
 const openVoidForm = (transaction) => {
   voidingId = transaction.id;
   const isUtang = transaction.type === "utang";
@@ -589,7 +589,7 @@ document.getElementById("void-form").addEventListener("submit", async (event) =>
 
 document.getElementById("add-utang-button").addEventListener("click", openUtangForm);
 document.getElementById("add-other-button").addEventListener("click", addOtherItem);
-// Enter in the "other item" fields adds the item instead of saving the whole utang.
+// Enter in the "other item" fields adds the item instead of saving the whole debt.
 for (const input of [otherName, otherPrice]) {
   input.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;

@@ -36,7 +36,7 @@ def export():
 @login_required_api
 def api_list():
     """?page=2&per_page=20&q=coke : one page of the products whose name has "coke".
-    Without ?page= : all products (the utang form searches all of them)."""
+    Without ?page= : all products (the debt form searches all of them)."""
     return jsonify(ProductService(get_db()).list(
         request.args.get("page", type=int),
         request.args.get("per_page", default=DEFAULT_PER_PAGE, type=int),

@@ -19,12 +19,12 @@ def check_settings(settings, own, path):
 
 
 def check_units(units, path):
-    """The units as they are, or ValueError if the file doesn't look like {"pc": "pc (piraso)"}."""
+    """The units as they are, or ValueError if the file doesn't look like {"pc": "pc (piece)"}."""
     valid = (
         isinstance(units, dict)
         and units
         and all(isinstance(k, str) and k.strip() and isinstance(v, str) for k, v in units.items())
     )
     if not valid:
-        raise ValueError(f'{path} must look like {{"pc": "pc (piraso)", "kg": "kg (kilo)"}}')
+        raise ValueError(f'{path} must look like {{"pc": "pc (piece)", "kg": "kg (kilogram)"}}')
     return units

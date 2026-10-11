@@ -1,4 +1,4 @@
-"""Dashboard: total utang, biggest balances, recent transactions."""
+"""Dashboard: total debt, biggest balances, recent transactions."""
 
 from flask import Blueprint, jsonify, render_template
 

@@ -1,4 +1,4 @@
-"""The transactions (utang and payments) and the items of each utang."""
+"""The transactions (debt and payments) and the items of each debt."""
 
 from sari_utang.repositories.base import Repository
 
@@ -48,7 +48,7 @@ class TransactionRepository(Repository):
         )
 
     def items_for_customer(self, customer_id):
-        """The items of all of one customer's utang."""
+        """The items of all of one customer's debt."""
         return self.all(
             """
             SELECT i.transaction_id, i.product_id, i.name, i.unit, i.price, i.quantity, i.amount
@@ -81,7 +81,7 @@ class TransactionRepository(Repository):
         )
 
     def create_utang(self, customer_id, total, note, items):
-        """Save an utang and its items together. Returns the new transaction's id."""
+        """Save a debt and its items together. Returns the new transaction's id."""
         transaction_id = self.execute(
             "INSERT INTO transactions (customer_id, type, amount, note) VALUES (?, 'utang', ?, ?)",
             (customer_id, total, note),

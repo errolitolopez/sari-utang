@@ -1,4 +1,4 @@
-"""Singilin: the customers to collect from."""
+"""Collections: the customers to collect from."""
 
 from flask import Blueprint, jsonify, render_template
 

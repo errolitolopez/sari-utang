@@ -17,7 +17,7 @@ class ProductService(Service):
     def list(self, page=None, per_page=20, query=""):
         """Products, A-Z.
 
-        Without a page: all products (the utang form searches all of them).
+        Without a page: all products (the debt form searches all of them).
         With a page: one page of the products whose name has the query.
         """
         if page is None:

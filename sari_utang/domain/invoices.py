@@ -1,4 +1,4 @@
-"""An invoice: only the utang that is still unpaid, as a page, as text and as a file name."""
+"""An invoice: only the debt that is still unpaid, as a page, as text and as a file name."""
 
 import re
 from decimal import Decimal
@@ -10,17 +10,17 @@ MAX_FILENAME_LENGTH = 80
 
 
 def unpaid_entries(rows):
-    """The utang that is still unpaid, and the date of the last payment (or None).
+    """The debt that is still unpaid, and the date of the last payment (or None).
 
     rows: one customer's transactions that are not voided, oldest first.
 
-    Payments pay off the oldest utang first (same rule as the Singilin list):
-    - an utang fully covered by payments is left out,
-    - an utang partly covered is shown with how much was already paid on it,
-    - newer utang are shown in full.
+    Payments pay off the oldest debt first (same rule as the Collections list):
+    - a debt fully covered by payments is left out,
+    - a debt partly covered is shown with how much was already paid on it,
+    - newer debts are shown in full.
     """
     payments = [r for r in rows if r["type"] == "payment"]
-    paid_left = sum(p["amount"] for p in payments)  # payments not yet applied to an utang
+    paid_left = sum(p["amount"] for p in payments)  # payments not yet applied to a debt
 
     entries = []
     for row in rows:
@@ -29,7 +29,7 @@ def unpaid_entries(rows):
         if paid_left >= row["amount"]:
             paid_left -= row["amount"]  # fully paid: not on the invoice
             continue
-        paid = paid_left  # 0, or part of this utang that was already paid
+        paid = paid_left  # 0, or part of this debt that was already paid
         paid_left = 0
         entries.append(dict(row, items=[], paid=paid, remaining=row["amount"] - paid))
 
@@ -69,17 +69,17 @@ def describe_item(item):
 
 def invoice_text(store_name, customer_name, invoice, today):
     """Plain-text version for copying into Messenger/Viber or sending by SMS."""
-    lines = [store_name, f"Utang ni {customer_name} (as of {today})", ""]
+    lines = [store_name, f"Debt of {customer_name} (as of {today})", ""]
     if not invoice["entries"]:
-        return "\n".join(lines + ["Walang utang. Bayad na lahat."])
+        return "\n".join(lines + ["No debt. All paid."])
     for entry in invoice["entries"]:
         items = ", ".join(describe_item(i) for i in entry["items"]) or "Utang"
         lines.append(f"{entry['date'][:10]}  {items}: {peso(entry['amount'])}")
         if entry["paid"]:
-            lines.append(f"   bayad na -{peso(entry['paid'])}, natitira {peso(entry['remaining'])}")
-    lines += ["", f"Total utang: {peso(invoice['total_utang'])}"]
+            lines.append(f"   already paid -{peso(entry['paid'])}, remaining {peso(entry['remaining'])}")
+    lines += ["", f"Total debt: {peso(invoice['total_utang'])}"]
     if invoice["partly_paid"]:
-        lines.append(f"Bayad na (partial): -{peso(invoice['partly_paid'])}")
+        lines.append(f"Already paid (partial): -{peso(invoice['partly_paid'])}")
     lines.append(f"Balance: {peso(invoice['balance'])}")
     return "\n".join(lines)
 

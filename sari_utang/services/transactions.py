@@ -1,4 +1,4 @@
-"""A customer's history, adding an utang or payment, and voiding one."""
+"""A customer's history, adding a debt or payment, and voiding one."""
 
 from sari_utang.domain.money import is_whole_number
 from sari_utang.domain.utang import KINDS, check_items, check_note, split_payment
@@ -24,7 +24,7 @@ class TransactionService(Service):
         return {"customer": customer_json(customer), "transactions": transactions}
 
     def add(self, data):
-        """Add an utang or a payment for a customer. Returns the JSON answer."""
+        """Add a debt or a payment for a customer. Returns the JSON answer."""
         kind = data.get("type")
         if kind not in KINDS:
             raise ValidationError('type must be "utang" or "payment".')
@@ -56,7 +56,7 @@ class TransactionService(Service):
         }
 
     def void(self, transaction_id, data):
-        """Cancel an utang or payment entered by mistake. It stays in the history, crossed out."""
+        """Cancel a debt or payment entered by mistake. It stays in the history, crossed out."""
         transaction = self.transactions.get(transaction_id)
         if transaction is None:
             raise NotFoundError("Transaction not found.")
@@ -65,12 +65,12 @@ class TransactionService(Service):
 
         reason = check_note(data.get("reason"), what="Reason")
 
-        # Voiding an utang lowers the balance. If part of it was already paid, the
+        # Voiding a debt lowers the balance. If part of it was already paid, the
         # balance would go below zero, so the payment has to be voided first.
         customer = self.customers.get_with_balance(transaction["customer_id"])
         if transaction["type"] == "utang" and customer["balance"] - transaction["amount"] < 0:
             raise ValidationError(
-                "Part of this utang was already paid. Void the payment first, then this utang."
+                "Part of this debt was already paid. Void the payment first, then this debt."
             )
 
         self.transactions.void(transaction_id, reason or None)

@@ -1,4 +1,4 @@
-"""Who to collect from (Singilin) and the dashboard summary."""
+"""Who to collect from (Collections) and the dashboard summary."""
 
 from datetime import date
 

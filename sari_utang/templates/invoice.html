@@ -37,15 +37,15 @@
             <div class="text-body-secondary">{{ today }}</div>
           </div>
           <div class="d-flex justify-content-between align-items-baseline invoice-rule pb-1 mb-1">
-            <div>Utang ni <span class="fw-semibold">{{ customer.name }}</span></div>
+            <div>Debt of <span class="fw-semibold">{{ customer.name }}</span></div>
             {% if customer.phone %}<div class="text-body-secondary">{{ customer.phone }}</div>{% endif %}
           </div>
 
           {% if not invoice.entries %}
-          <div class="py-2">Walang utang. Bayad na lahat. 🎉</div>
+          <div class="py-2">No debt. All paid. 🎉</div>
           {% else %}
 
-          <!-- Unpaid utang, oldest first. One line per item. -->
+          <!-- Unpaid debt, oldest first. One line per item. -->
           <table class="invoice-table">
             <tbody>
               {% for entry in invoice.entries %}
@@ -70,13 +70,13 @@
               </tr>
               {% endif %}
               {% if entry.paid %}
-              <!-- Part of this utang was already paid (payments pay the oldest utang first) -->
+              <!-- Part of this debt was already paid (payments pay the oldest debt first) -->
               <tr class="invoice-subtotal">
-                <td class="text-end text-body-secondary">Bayad na (partial)</td>
+                <td class="text-end text-body-secondary">Already paid (partial)</td>
                 <td class="text-end">−{{ entry.paid|peso }}</td>
               </tr>
               <tr class="invoice-subtotal">
-                <td class="text-end text-body-secondary">Natitira</td>
+                <td class="text-end text-body-secondary">Remaining</td>
                 <td class="text-end fw-semibold">{{ entry.remaining|peso }}</td>
               </tr>
               {% endif %}
@@ -105,12 +105,12 @@
           <table class="invoice-table invoice-totals">
             <tbody>
               <tr>
-                <td>Total utang</td>
+                <td>Total debt</td>
                 <td class="text-end">{{ invoice.total_utang|peso }}</td>
               </tr>
               {% if invoice.partly_paid %}
               <tr>
-                <td>Bayad na (partial)</td>
+                <td>Already paid (partial)</td>
                 <td class="text-end">−{{ invoice.partly_paid|peso }}</td>
               </tr>
               {% endif %}
@@ -121,7 +121,7 @@
             </tbody>
           </table>
           {% if invoice.last_payment %}
-          <div class="small text-body-secondary mt-1">Huling bayad: {{ invoice.last_payment[:10] }}</div>
+          <div class="small text-body-secondary mt-1">Last payment: {{ invoice.last_payment[:10] }}</div>
           {% endif %}
           {% endif %}
         </div>

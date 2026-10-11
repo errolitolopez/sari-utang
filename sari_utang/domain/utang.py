@@ -1,4 +1,4 @@
-"""Rules for an utang (several items) and a payment."""
+"""Rules for a debt (several items) and a payment."""
 
 from sari_utang.domain.money import (
     MAX_PRICE, is_whole_number, line_amount, parse_quantity,
@@ -22,7 +22,7 @@ def check_note(value, what="Note"):
 
 
 def make_item(raw, number, find_product):
-    """Check one item of an utang and return it as a dict.
+    """Check one item of a debt and return it as a dict.
 
     An item is either a product from the list: {"product_id": 3, "quantity": 2}
     or typed in by hand:                        {"name": "Yelo", "price": 500, "quantity": 1}
@@ -66,7 +66,7 @@ def make_item(raw, number, find_product):
 
 
 def check_items(raw_items, find_product):
-    """All items of an utang, checked first so nothing is saved if one of them is wrong.
+    """All items of a debt, checked first so nothing is saved if one of them is wrong.
 
     Returns (items, total). The total is always computed here, never taken from the page.
     """
@@ -85,15 +85,15 @@ def split_payment(amount, balance, customer_name):
     """What a payment does. Returns (paid, change, tendered).
 
     A payment lowers the balance and can be partial. If the customer hands over more than
-    the utang, it counts as paid in full: only the utang is recorded as paid, and the
-    extra is the sukli (change). tendered (the cash received) is kept only when there was sukli.
+    the debt, it counts as paid in full: only the debt is recorded as paid, and the
+    extra is the change. tendered (the cash received) is kept only when there was change.
     """
     if not is_whole_number(amount) or amount <= 0:
         raise ValidationError("Amount must be more than P0.")
     if amount > MAX_TENDERED:
         raise ValidationError("Amount is too high (max P1,000,000).")
     if balance <= 0:
-        raise ValidationError(f"{customer_name} has no utang to pay.")
+        raise ValidationError(f"{customer_name} has no debt to pay.")
     paid = min(amount, balance)
     change = amount - paid
     return paid, change, amount if change > 0 else None

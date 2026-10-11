@@ -1,13 +1,13 @@
 {
-  "pc": "pc (piraso)",
+  "pc": "pc (piece)",
   "pack": "pack",
   "box": "box",
   "sachet": "sachet",
   "bottle": "bottle",
   "can": "can",
-  "kg": "kg (kilo)",
+  "kg": "kg (kilogram)",
   "g": "g (gram)",
-  "L": "L (litro)",
+  "L": "L (liter)",
   "ml": "ml",
   "oz": "oz (ounce)"
 }

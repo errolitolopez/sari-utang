@@ -1,16 +1,16 @@
-"""Who owes, and how long their oldest unpaid utang has been waiting."""
+"""Who owes, and how long their oldest unpaid debt has been waiting."""
 
 from datetime import date
 
 
 def collection_list(rows, today):
-    """Everyone who owes, with how long their oldest unpaid utang has been waiting.
+    """Everyone who owes, with how long their oldest unpaid debt has been waiting.
 
     rows: the customers' transactions that are not voided, oldest first, each with
     customer_id, type, amount, date, name and phone.
 
-    Payments pay off the oldest utang first. So for each customer we add up all
-    their payments, then go through their utang from oldest to newest, crossing
+    Payments pay off the oldest debt first. So for each customer we add up all
+    their payments, then go through their debt from oldest to newest, crossing
     off each one the payments fully cover. The first one left is the oldest unpaid.
     """
     customers = {}  # customer id -> what we know about them
@@ -37,7 +37,7 @@ def collection_list(rows, today):
             if left_to_cover >= u["amount"]:
                 left_to_cover -= u["amount"]  # fully paid
             else:
-                unpaid_since = u["date"]  # oldest utang not fully paid yet
+                unpaid_since = u["date"]  # oldest debt not fully paid yet
                 break
 
         since_day = date.fromisoformat(unpaid_since[:10])  # "2026-10-10 10:15:22" -> 2026-10-10

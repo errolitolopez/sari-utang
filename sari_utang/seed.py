@@ -1,4 +1,4 @@
-"""Sample data for trying out the app: common sari-sari products, customers, utang and payments.
+"""Sample data for trying out the app: common sari-sari products, customers, debt and payments.
 
 Run with: flask --app app seed
           flask --app app seed --products-only
@@ -48,16 +48,16 @@ PRODUCTS = [
     ("Argentina Corned Beef", 40, "can"),
     ("Purefoods Vienna Sausage", 35, "can"),
     # Rice, cooking
-    ("Bigas Dinorado", 60, "kg"),
-    ("Bigas Sinandomeng", 52, "kg"),
-    ("Asukal Puti", 90, "kg"),
-    ("Asukal Pula", 80, "kg"),
-    ("Itlog", 9, "pc"),
-    ("Mantika", 20, "pack"),
-    ("Toyo Silver Swan", 6, "sachet"),
-    ("Suka Datu Puti", 5, "sachet"),
-    ("Patis", 6, "sachet"),
-    ("Asin", 15, "pack"),
+    ("Dinorado Rice", 60, "kg"),
+    ("Sinandomeng Rice", 52, "kg"),
+    ("White Sugar", 90, "kg"),
+    ("Brown Sugar", 80, "kg"),
+    ("Egg", 9, "pc"),
+    ("Cooking Oil", 20, "pack"),
+    ("Silver Swan Soy Sauce", 6, "sachet"),
+    ("Datu Puti Vinegar", 5, "sachet"),
+    ("Fish Sauce", 6, "sachet"),
+    ("Salt", 15, "pack"),
     ("Magic Sarap", 5, "sachet"),
     # Snacks, bread
     ("Skyflakes", 9, "pack"),
@@ -73,27 +73,27 @@ PRODUCTS = [
     ("Downy", 8, "sachet"),
     ("Sunsilk Shampoo", 7, "sachet"),
     ("Colgate", 10, "sachet"),
-    ("Yelo", 5, "pc"),
+    ("Ice", 5, "pc"),
 ]
 
 # Sample customers and their history. Each entry: (days ago, kind, details)
 #   ("utang", [(product name, unit, quantity), ...], note)
-#   ("payment", cash received in pesos, note)    -> more than the utang gives sukli
+#   ("payment", cash received in pesos, note)    -> more than the debt gives change
 #   ("void", reason)                              -> voids the entry just before it
 CUSTOMERS = [
     ("Aling Nena", "0917 123 4567", [
-        (70, "utang", [("Bigas Dinorado", "kg", 2), ("Itlog", "pc", 6)], None),
-        (45, "utang", [("Lucky Me Pancit Canton", "pack", 4), ("Coke Mismo", "bottle", 2)], "merienda"),
-        (30, "payment", 174, None),  # pays off the oldest utang; the 45-day one is still unpaid
-        (10, "utang", [("Mantika", "pack", 1), ("Toyo Silver Swan", "sachet", 2)], None),
+        (70, "utang", [("Dinorado Rice", "kg", 2), ("Egg", "pc", 6)], None),
+        (45, "utang", [("Lucky Me Pancit Canton", "pack", 4), ("Coke Mismo", "bottle", 2)], "snack"),
+        (30, "payment", 174, None),  # pays off the oldest debt; the 45-day one is still unpaid
+        (10, "utang", [("Cooking Oil", "pack", 1), ("Silver Swan Soy Sauce", "sachet", 2)], None),
     ]),
     ("Mang Tonyo", "0918 555 0101", [
         (50, "utang", [("Red Horse 500ml", "bottle", 3), ("Boy Bawang", "pack", 2)], None),
-        (5, "payment", 500, "may sukli"),  # pays in full with sukli
+        (5, "payment", 500, "has change"),  # pays in full with change
         (2, "utang", [("San Miguel Pale Pilsen", "bottle", 2)], None),
     ]),
     ("Kuya Jun", "0927 222 3344", [
-        (35, "utang", [("Argentina Corned Beef", "can", 2), ("Bigas Sinandomeng", "kg", 3)], None),
+        (35, "utang", [("Argentina Corned Beef", "can", 2), ("Sinandomeng Rice", "kg", 3)], None),
     ]),
     ("Ate Liza", None, [
         (20, "utang", [("Bear Brand Swak", "sachet", 5), ("Pandesal", "pc", 10)], None),
@@ -101,18 +101,18 @@ CUSTOMERS = [
         (3, "payment", 50, None),  # partial
     ]),
     ("Lola Carmen", "0999 876 5432", [
-        (1, "utang", [("Asukal Puti", "kg", 0.5), ("Nescafe 3in1 Original", "sachet", 5)], None),
+        (1, "utang", [("White Sugar", "kg", 0.5), ("Nescafe 3in1 Original", "sachet", 5)], None),
     ]),
     ("Bong", None, [
         (40, "utang", [("Coke Mismo", "box", 2)], None),
-        (40, "void", "maling quantity"),  # entered by mistake
+        (40, "void", "wrong quantity"),  # entered by mistake
         (12, "utang", [("Coke Mismo", "bottle", 2), ("Piattos", "pack", 1)], None),
     ]),
     ("Marites", "0905 111 2222", [
-        (60, "utang", [("Century Tuna Flakes", "can", 3), ("Bigas Dinorado", "kg", 1)], None),
-        (15, "payment", 174, "bayad lahat"),  # paid in full, not in Singilin
+        (60, "utang", [("Century Tuna Flakes", "can", 3), ("Dinorado Rice", "kg", 1)], None),
+        (15, "payment", 174, "paid in full"),  # paid in full, not in Collections
     ]),
-    ("Dodong", None, []),  # no utang yet
+    ("Dodong", None, []),  # no debt yet
 ]
 
 
@@ -217,7 +217,7 @@ def add_customers(db):
 @click.option("--products-only", is_flag=True, help="Only add the sample products.")
 @with_appcontext
 def seed_command(products_only):
-    """Add sample products, customers, utang and payments for trying out the app."""
+    """Add sample products, customers, debt and payments for trying out the app."""
     backup = backup_database()
     if backup:
         click.echo(f"Backup saved: {backup}")

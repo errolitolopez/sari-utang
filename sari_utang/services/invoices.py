@@ -17,7 +17,7 @@ from sari_utang.services.customers import CustomerService
 
 class InvoiceService(Service):
     def invoice(self, customer_id):
-        """Only the utang that is still unpaid, with items. Voided entries are left out."""
+        """Only the debt that is still unpaid, with items. Voided entries are left out."""
         entries, last_payment = unpaid_entries(self.transactions.active_for_customer(customer_id))
         by_id = {entry["id"]: entry for entry in entries}
         if by_id:
@@ -54,14 +54,14 @@ class InvoiceService(Service):
         return pdf, safe_filename(customer["name"], f"customer-{customer_id}") + ".pdf"
 
     def zip_of_all(self, min_days=0):
-        """One PDF invoice per customer with utang, named after the customer, in one ZIP.
+        """One PDF invoice per customer with debt, named after the customer, in one ZIP.
 
-        min_days: only customers whose oldest unpaid utang is that many days old.
+        min_days: only customers whose oldest unpaid debt is that many days old.
         Returns (bytes, file name).
         """
         owing = [c for c in CollectionService(self.db).owing() if c["days"] >= min_days]
         if not owing:
-            raise NotFoundError("No customers with utang for this filter.")
+            raise NotFoundError("No customers with debt for this filter.")
 
         store_name = config.load_settings()["store_name"]
         today = date.today().isoformat()

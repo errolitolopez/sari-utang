@@ -1,4 +1,4 @@
-"""Add an utang or a payment, and void one."""
+"""Add a debt or a payment, and void one."""
 
 from flask import Blueprint, jsonify
 

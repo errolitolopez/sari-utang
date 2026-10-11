@@ -63,7 +63,7 @@ def ensure_config_files():
 def load_settings():
     """Read config/settings.json. Read every time, so edits show up on the next refresh.
 
-    overdue_days: an utang unpaid for this many days or more counts as "matagal".
+    overdue_days: a debt unpaid for this many days or more counts as "overdue".
     store_name:   shown at the top of invoices (optional).
     """
     # Start from the example's values, so a setting added in a newer version
@@ -79,7 +79,7 @@ def load_units():
     """Read the units (what one "price" buys) from config/units.json.
 
     The file is read every time, so edits show up on the next page refresh.
-    Format: {"kg": "kg (kilo)", ...} -> the key is saved with the product,
+    Format: {"kg": "kg (kilogram)", ...} -> the key is saved with the product,
     the text is shown in the dropdown. The first unit is the default.
     """
     with open(UNITS_FILE, encoding="utf8") as f:

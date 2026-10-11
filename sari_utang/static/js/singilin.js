@@ -1,7 +1,7 @@
-// Singilin: customers who owe, longest-waiting utang first, with a "days" filter.
+// Collections: customers who owe, longest-waiting debt first, with a "days" filter.
 
 let customers = []; // from /api/singilin
-let overdueDays = 30; // from config/settings.json: this many days or more = "matagal"
+let overdueDays = 30; // from config/settings.json: this many days or more = "overdue"
 let minDays = null; // the selected filter (0 = everyone who owes)
 
 const list = document.getElementById("singilin-list");
@@ -13,7 +13,7 @@ const daysText = (days) => {
   return days === 1 ? "1 day" : `${days} days`;
 };
 
-// One customer. Red when the utang has waited "overdueDays" or longer. Tap to open.
+// One customer. Red when the debt has waited "overdueDays" or longer. Tap to open.
 const customerRow = (customer) => {
   const isOverdue = customer.days >= overdueDays;
   const row = makeElement("a", "list-group-item list-group-item-action");
@@ -36,20 +36,20 @@ const customerRow = (customer) => {
   const details = [];
   if (customer.phone) details.push(customer.phone);
   details.push(
-    customer.last_payment ? `last bayad ${customer.last_payment.slice(0, 10)}` : "no bayad yet"
+    customer.last_payment ? `last payment ${customer.last_payment.slice(0, 10)}` : "no payment yet"
   );
   row.append(top, bottom, makeElement("div", "small text-body-secondary", details.join(" · ")));
   return row;
 };
 
-// renderFilters() -> the "Lahat (5)" / "30+ araw (2)" buttons
+// renderFilters() -> the "All (5)" / "30+ days (2)" buttons
 const renderFilters = () => {
   // 7, 15, 30 days plus the configured number, without duplicates, smallest first.
   const options = [...new Set([0, 7, 15, 30, overdueDays])].sort((a, b) => a - b);
   filters.replaceChildren(
     ...options.map((days) => {
       const count = customers.filter((c) => c.days >= days).length;
-      const label = days === 0 ? `Lahat (${count})` : `${days}+ araw (${count})`;
+      const label = days === 0 ? `All (${count})` : `${days}+ days (${count})`;
       const button = makeElement(
         "button",
         `btn btn-sm ${days === minDays ? "btn-primary" : "btn-outline-primary"}`,
@@ -85,7 +85,7 @@ const render = () => {
   if (shown.length) {
     list.replaceChildren(...shown.map(customerRow));
   } else {
-    const message = customers.length ? "Walang utang na ganito katagal. 🎉" : "Walang utang. 🎉";
+    const message = customers.length ? "No debt this old. 🎉" : "No debt. 🎉";
     list.replaceChildren(makeElement("div", "list-group-item text-body-secondary", message));
   }
 };
@@ -102,7 +102,7 @@ const loadList = async () => {
     const data = await response.json();
     customers = data.customers;
     overdueDays = data.overdue_days;
-    if (minDays === null) minDays = overdueDays; // start with the "matagal" ones
+    if (minDays === null) minDays = overdueDays; // start with the "overdue" ones
     render();
   } catch (error) {
     console.error(error); // shows the real cause in the browser console (F12)

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Singilin · Sari Utang{% endblock %}
+{% block title %}Collections · Sari Utang{% endblock %}
 
 {% block content %}
 {% include "_navbar.html" %}
@@ -17,7 +17,7 @@
 
   <div class="card mb-2">
     <div class="card-header d-flex justify-content-between">
-      <span class="fw-semibold">Singilin</span>
+      <span class="fw-semibold">Collections</span>
       <span id="singilin-summary" class="text-body-secondary small"></span>
     </div>
     <div id="singilin-list" class="list-group list-group-flush">
@@ -25,7 +25,7 @@
     </div>
   </div>
   <p class="small text-body-secondary">
-    Days = how long the oldest unpaid utang has been waiting. Payments pay off the oldest utang first.
+    Days = how long the oldest unpaid debt has been waiting. Payments pay off the oldest debt first.
   </p>
 </main>
 {% endblock %}

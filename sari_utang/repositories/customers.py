@@ -10,14 +10,14 @@ BALANCES_SQL = """
     FROM customers c
     LEFT JOIN transactions t ON t.customer_id = c.id AND t.voided_at IS NULL
 """
-# Highest utang first, then A-Z.
+# Highest debt first, then A-Z.
 BALANCE_ORDER = "balance DESC, c.name COLLATE NOCASE"
 SEARCH_WHERE = "WHERE (c.name LIKE ? ESCAPE '\\' OR c.phone LIKE ? ESCAPE '\\')"
 
 
 class CustomerRepository(Repository):
     def with_balances(self):
-        """All customers with their balance (total utang - total payments, in centavos)."""
+        """All customers with their balance (total debt - total payments, in centavos)."""
         return self.all(f"{BALANCES_SQL} GROUP BY c.id ORDER BY {BALANCE_ORDER}")
 
     def get_with_balance(self, customer_id):

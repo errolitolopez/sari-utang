@@ -7,7 +7,7 @@ Safe by design:
   - only a clean "fast-forward" update (git merge --ff-only); never overwrites local edits
   - no internet, local edits, or git not installed -> skip and keep the current version
   - never asks for a password (it would get stuck with no window to type in)
-  - the utang data (instance/) and backups/ are not in git, so they are never touched
+  - the debt data (instance/) and backups/ are not in git, so they are never touched
 Turn it off with "auto_update": false in config/settings.json.
 """
 
