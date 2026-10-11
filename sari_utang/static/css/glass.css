@@ -156,6 +156,25 @@ footer {
 /* The "− [ 2 ] +" quantity box of an utang item stays small, even on a wide screen */
 .qty-group { max-width: 190px; }
 
+/* A faint Sari Utang mark in the bottom-right corner of the page, behind everything: black on
+   the light theme, white on the dark theme. The glass panels blur it where they cover it. */
+body::before {
+  content: "";
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  width: min(400px, 60vw);
+  height: min(400px, 60vw);
+  z-index: -1;
+  background: url("../mark-black.png") no-repeat bottom right / contain;
+  opacity: 0.05;
+  pointer-events: none;
+}
+[data-bs-theme="dark"] body::before {
+  background-image: url("../mark-white.png");
+  opacity: 0.06;
+}
+
 /* --- Invoice: compact, receipt-like --- */
 .invoice { font-size: 0.875rem; max-width: 420px; margin: 0 auto; }
 .invoice .card-body { padding: 0.75rem; }
@@ -188,6 +207,7 @@ footer {
 @media print {
   @page { size: A6; margin: 6mm; }
   body { background: var(--paper); }
+  body::before { display: none; }
   main.container { padding: 0 !important; max-width: none !important; }
   /* Receipt width, even if the phone prints on A4/Letter instead of A6 */
   .invoice {
