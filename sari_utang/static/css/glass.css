@@ -156,6 +156,16 @@ footer {
 /* The "− [ 2 ] +" quantity box of an utang item stays small, even on a wide screen */
 .qty-group { max-width: 190px; }
 
+/* The mark in the navbar: the same one-colour picture as the page background, painted with the
+   text colour, so it is black on the light theme and white on the dark theme (like myguro's logo). */
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  background-color: currentColor;
+  -webkit-mask: url("../mark-black.png") no-repeat center / contain;
+  mask: url("../mark-black.png") no-repeat center / contain;
+}
+
 /* A faint Sari Utang mark in the bottom-right corner of the page, behind everything: black on
    the light theme, white on the dark theme. The glass panels blur it where they cover it. */
 body::before {
