@@ -110,25 +110,44 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 - `auto_update` (true/false): pull the newest version from GitHub at start and every 6 hours (only for copies installed with `git clone`).
 - `overdue_days` (1 to 365): an utang unpaid this many days or more counts as "matagal". Those customers are red in the Singilin list and counted on the Dashboard. Edit and refresh, no restart needed.
 
+## Tests
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pytest
+```
+
+The tests use a throwaway database (`SARI_UTANG_DATABASE`), so your own data is not touched.
+
 ## Project structure
 
 ```
-app.py             routes: pages and /api endpoints
-db.py              database connection + init-db / set-pin commands
+app.py             entry point: creates the app (flask --app app run)
+sari_utang/        the app, in layers (each only uses the ones below it)
+  web/             Flask blueprints: pages and /api endpoints, login check
+  services/        use cases: rules, ownership checks, commit
+  repositories/    all SQL, one class per table
+  domain/          rules with no Flask or SQL: cleaning input, amounts, who owes what
+  errors.py        typed errors (ValidationError, NotFoundError, ...) turned into JSON answers
+  config.py        paths, sessions, reading config/settings.json and units.json
+  database.py      database connection + init-db command
+  cli.py           set-pin command
+  seed.py          sample products, customers, utang and payments (flask --app app seed)
+  excel.py         products .xlsx import/export (openpyxl)
+  invoice_pdf.py   invoice PDFs (fpdf2), A6 receipt layout
+  fonts/           DejaVu Sans font for PDFs (has the ₱ sign), with its license
+  schema.sql       tables: settings, customers, transactions, transaction_items, products
+  templates/       HTML pages (Bootstrap)
+  static/          page scripts (js/), theme and glass look (css/glass.css), icons
+tests/             pytest tests (.venv/bin/pytest)
 updater.py         auto-update from GitHub (git pull --ff-only), used by start.py
 start.py           everyday start: database, PIN, backup, Waitress server
 run.bat            Windows: first-time setup / start with a window
 reinstall.bat      Windows: fresh app files + packages, keeps instance/, backups/, config/*.json
 create-shortcuts.bat  Windows: Desktop icons "Sari Utang" (background + browser) and "Stop Sari Utang"
 windows/           helpers: make-shortcut.ps1 (shortcuts, auto-start), setup.bat (.venv + packages for run.bat / reinstall.bat)
-seed.py            sample products, customers, utang and payments (flask --app app seed)
-invoice_pdf.py     invoice PDFs (fpdf2), A6 receipt layout
-fonts/             DejaVu Sans font for PDFs (has the ₱ sign), with its license
-schema.sql         tables: settings, customers, transactions, transaction_items, products
 config/*.example.json  default settings and units (in git)
 config/settings.json, units.json  this store's own copies (made on first start, not in git, editable)
-templates/         HTML pages (Bootstrap)
-static/js/         page scripts (fetch the API)
 instance/          database and secret key (private, not in git)
 ```
 
