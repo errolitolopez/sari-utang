@@ -1,22 +1,22 @@
 # sari-utang
 
-A web app for keeping the credit (debt) list of a small neighborhood store (a sari-sari store) — a digital version of the paper notebook.
+A web app for keeping the credit list of a small neighborhood store (a sari-sari store) — a digital version of the paper notebook.
 
 Built with Python (Flask), SQLite, vanilla JavaScript and Bootstrap 5.
 
 ## Features
 
 - PIN login (stays logged in for 30 days; 5 wrong PINs locks that device out for 5 minutes)
-- Dashboard: total debt, customers with debt, biggest balances, recent transactions
+- Dashboard: total credit, customers with credit, biggest balances, recent transactions
 - Products import/export as Excel (.xlsx): export (with a unit dropdown), edit prices, import back. New name + unit is added, same name + unit gets its price updated, nothing is deleted. All or nothing: a file with a bad row imports nothing and lists the rows to fix
-- Customer list: highest debt first, paged (20 per page), search by name or phone, add customers
+- Customer list: highest credit first, paged (20 per page), search by name or phone, add customers
 - Customer page: balance and full history; tap a customer to open it, tap a history entry to see its items, quantities, prices and note
-- Add debt: pick products, set quantities with − / + buttons or type them (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
-- Record payments: full or partial, optional note. Paying more than the debt counts as paid in full and shows the change
-- Invoice per customer: only the unpaid debt (items, qty × price). Payments pay off the oldest debt first: fully paid debts are left out, a partly paid one shows "already paid" and what's left. Optional summary by product, total, balance. Download as PDF (A6 receipt), print, copy as text, or send by SMS Print / save as PDF, copy as text for Messenger/Viber, or send by SMS
+- Add credit: pick products, set quantities with − / + buttons or type them (e.g. 2 bottle, 0.5 kg), add items not in the list, optional note
+- Record payments: full or partial, optional note. Paying more than the credit counts as paid in full and shows the change
+- Invoice per customer: only the unpaid credit (items, qty × price). Payments pay off the oldest credit first: fully paid credits are left out, a partly paid one shows "already paid" and what's left. Optional summary by product, total, balance. Download as PDF (A6 receipt), print, copy as text, or send by SMS Print / save as PDF, copy as text for Messenger/Viber, or send by SMS
 - Batch export: on the Collections page, download a ZIP with one PDF invoice per customer (file name = customer name, e.g. `Aling Nena.pdf`), following the selected filter
 - Collections list: everyone who owes, longest-waiting first, with filters (7+, 15+, 30+ days). "Overdue" (default 30 days) is set in [config/settings.json](#settings-configsettingsjson) and shown on the Dashboard
-- Void a debt or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
+- Void a credit or payment entered by mistake: it stays in the history crossed out (with the reason) and no longer counts
 - Product list with price per unit (pc, box, kg, ml, oz, ... — see [Configuration](#configuration)): paged (20 per page), search, add, tap to edit. The same product can be listed once per unit (e.g. Coke Mismo per pc and per box)
 
 ### Planned
@@ -66,7 +66,7 @@ Open http://127.0.0.1:5000 and log in with your PIN.
 ### Sample data (for trying it out)
 
 ```bash
-flask --app app seed                  # ~50 common sari-sari products + 8 customers with debt/payments
+flask --app app seed                  # ~50 common sari-sari products + 8 customers with credit/payments
 flask --app app seed --products-only  # only the products
 ```
 
@@ -108,7 +108,7 @@ The units in the product form's **Per** dropdown. Edit the file and refresh the 
 
 - `store_name`: shown at the top of invoices.
 - `auto_update` (true/false): pull the newest version from GitHub at start and every 6 hours (only for copies installed with `git clone`).
-- `overdue_days` (1 to 365): a debt unpaid this many days or more counts as "overdue". Those customers are red in the Collections list and counted on the Dashboard. Edit and refresh, no restart needed.
+- `overdue_days` (1 to 365): a credit unpaid this many days or more counts as "overdue". Those customers are red in the Collections list and counted on the Dashboard. Edit and refresh, no restart needed.
 
 ## Tests
 
@@ -132,7 +132,7 @@ sari_utang/        the app, in layers (each only uses the ones below it)
   config.py        paths, sessions, reading config/settings.json and units.json
   database.py      database connection + init-db command
   cli.py           set-pin command
-  seed.py          sample products, customers, debt and payments (flask --app app seed)
+  seed.py          sample products, customers, credit and payments (flask --app app seed)
   excel.py         products .xlsx import/export (openpyxl)
   invoice_pdf.py   invoice PDFs (fpdf2), A6 receipt layout
   fonts/           DejaVu Sans font for PDFs (has the ₱ sign), with its license
@@ -161,18 +161,18 @@ instance/          database and secret key (private, not in git)
 | GET | `/products/export.xlsx` | All products as Excel (`name`, `price` in pesos, `unit`) |
 | POST | `/api/products/import` | Upload an .xlsx (`file`): adds new products, updates prices of existing ones |
 | GET | `/customers/<id>/invoice.pdf` | One customer's invoice as PDF |
-| GET | `/singilin/invoices.zip?min_days=30` | ZIP of PDF invoices, one per customer with debt (optional `min_days` filter) |
-| GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid debt has waited (payments pay off the oldest debt first) |
-| GET | `/api/customers` | Customers with their balances, highest debt first; paged with `?page=1&per_page=20&q=nena` |
+| GET | `/singilin/invoices.zip?min_days=30` | ZIP of PDF invoices, one per customer with credit (optional `min_days` filter) |
+| GET | `/api/singilin` | Everyone who owes, with `days` their oldest unpaid credit has waited (payments pay off the oldest credit first) |
+| GET | `/api/customers` | Customers with their balances, highest credit first; paged with `?page=1&per_page=20&q=nena` |
 | POST | `/api/customers` | Add a customer: `{"name": "Mang Tonyo", "phone": "0917 123 4567"}` |
 | GET | `/api/products` | All products, or one page with `?page=1&per_page=20&q=coke` (returns `page`, `pages`, `total`) |
 | POST | `/api/products` | Add a product: `{"name": "Coke Mismo", "price": 2000, "unit": "bottle"}` |
 | PUT | `/api/products/<id>` | Change a product's name, price or unit (same body as POST) |
 | GET | `/api/customers/<id>/transactions` | One customer with their balance and history (with items) |
-| POST | `/api/transactions` | Add a debt or a payment (see below) |
-| POST | `/api/transactions/<id>/void` | Void a debt or payment entered by mistake |
+| POST | `/api/transactions` | Add a credit or a payment (see below) |
+| POST | `/api/transactions/<id>/void` | Void a credit or payment entered by mistake |
 
-Adding a debt — the server computes every amount and the total from the product prices:
+Adding a credit — the server computes every amount and the total from the product prices:
 
 ```json
 {
@@ -187,9 +187,9 @@ Adding a debt — the server computes every amount and the total from the produc
 }
 ```
 
-Quantities can have up to 3 decimals. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old debt.
+Quantities can have up to 3 decimals. Each item's name, unit and price are copied when saved, so changing a product's price later doesn't change old credit.
 
-Voiding: `POST /api/transactions/<id>/void` with an optional `{"reason": "maling quantity"}`. A debt can't be voided if that would make the balance negative (void the payment first).
+Voiding: `POST /api/transactions/<id>/void` with an optional `{"reason": "maling quantity"}`. A credit can't be voided if that would make the balance negative (void the payment first).
 
 Recording a payment (amount in centavos = the cash received):
 
@@ -197,6 +197,6 @@ Recording a payment (amount in centavos = the cash received):
 {"type": "payment", "customer_id": 1, "amount": 50000, "note": "GCash"}
 ```
 
-If the amount is more than the debt, only the debt is recorded as paid (balance becomes ₱0), the cash received is saved as `tendered`, and the response has the change: `{"change": 15000, ...}`.
+If the amount is more than the credit, only the credit is recorded as paid (balance becomes ₱0), the cash received is saved as `tendered`, and the response has the change: `{"change": 15000, ...}`.
 
 Amounts are in centavos (`1250` = ₱12.50).

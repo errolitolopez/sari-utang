@@ -153,7 +153,7 @@ footer {
   }
 }
 
-/* The "− [ 2 ] +" quantity box of a debt item stays small, even on a wide screen */
+/* The "− [ 2 ] +" quantity box of a credit item stays small, even on a wide screen */
 .qty-group { max-width: 190px; }
 
 /* The mark in the navbar: the same one-colour picture as the page background, painted with the

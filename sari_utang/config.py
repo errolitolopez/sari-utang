@@ -63,7 +63,7 @@ def ensure_config_files():
 def load_settings():
     """Read config/settings.json. Read every time, so edits show up on the next refresh.
 
-    overdue_days: a debt unpaid for this many days or more counts as "overdue".
+    overdue_days: a credit unpaid for this many days or more counts as "overdue".
     store_name:   shown at the top of invoices (optional).
     """
     # Start from the example's values, so a setting added in a newer version

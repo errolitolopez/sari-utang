@@ -22,7 +22,7 @@ def item_json(row):
 
 
 def transaction_json(row, items):
-    """One debt or payment of the customer's history, with its items (payments have none)."""
+    """One credit or payment of the customer's history, with its items (payments have none)."""
     return {
         "id": row["id"],
         "type": row["type"],

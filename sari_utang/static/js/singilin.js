@@ -1,4 +1,4 @@
-// Collections: customers who owe, longest-waiting debt first, with a "days" filter.
+// Collections: customers who owe, longest-waiting credit first, with a "days" filter.
 
 let customers = []; // from /api/singilin
 let overdueDays = 30; // from config/settings.json: this many days or more = "overdue"
@@ -13,7 +13,7 @@ const daysText = (days) => {
   return days === 1 ? "1 day" : `${days} days`;
 };
 
-// One customer. Red when the debt has waited "overdueDays" or longer. Tap to open.
+// One customer. Red when the credit has waited "overdueDays" or longer. Tap to open.
 const customerRow = (customer) => {
   const isOverdue = customer.days >= overdueDays;
   const row = makeElement("a", "list-group-item list-group-item-action");
@@ -85,7 +85,7 @@ const render = () => {
   if (shown.length) {
     list.replaceChildren(...shown.map(customerRow));
   } else {
-    const message = customers.length ? "No debt this old. 🎉" : "No debt. 🎉";
+    const message = customers.length ? "No credit this old. 🎉" : "No credit. 🎉";
     list.replaceChildren(makeElement("div", "list-group-item text-body-secondary", message));
   }
 };

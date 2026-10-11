@@ -1,9 +1,9 @@
-// One customer: shows their balance and history, and adds new debt.
+// One customer: shows their balance and history, and adds new credit.
 
 const customerId = Number(document.getElementById("customer-page").dataset.customerId);
 
-let products = []; // product list, loaded when the debt form opens
-let lines = []; // items in the debt being made: {productId, name, unit, price, quantity}
+let products = []; // product list, loaded when the credit form opens
+let lines = []; // items in the credit being made: {productId, name, unit, price, quantity}
 let balance = 0; // what the customer owes now, in centavos
 
 const modalElement = document.getElementById("utang-modal");
@@ -64,14 +64,14 @@ const renderCustomer = (customer) => {
   balanceText.className = `fs-3 fw-bold ${customer.balance > 0 ? "text-danger" : "text-success"}`;
 
   balance = customer.balance;
-  // Nothing to pay when there is no debt.
+  // Nothing to pay when there is no credit.
   document.getElementById("add-payment-button").disabled = balance <= 0;
 };
 
 // What an entry is about: "2 bottle Coke Mismo, 0.5 kg Rice" or "Payment".
 const describeTransaction = (transaction) => {
   if (transaction.items.length) return transaction.items.map(describeItem).join(", ");
-  return transaction.type === "utang" ? "Debt" : "Payment";
+  return transaction.type === "utang" ? "Credit" : "Payment";
 };
 
 // One line per entry in the history. Tap it to see the details.
@@ -135,7 +135,7 @@ const openDetails = (transaction) => {
   const isUtang = transaction.type === "utang";
   const isVoided = transaction.voided_at !== null;
 
-  document.getElementById("details-title").textContent = isUtang ? "Debt" : "Payment";
+  document.getElementById("details-title").textContent = isUtang ? "Credit" : "Payment";
   document.getElementById("details-date").textContent = transaction.date;
 
   const voided = document.getElementById("details-voided");
@@ -198,14 +198,14 @@ const loadCustomer = async () => {
     history.replaceChildren(
       ...(data.transactions.length
         ? data.transactions.map(historyItem)
-        : [makeElement("div", "list-group-item text-body-secondary", "No debt yet.")])
+        : [makeElement("div", "list-group-item text-body-secondary", "No credit yet.")])
     );
   } catch {
     showError("customer-error", "Cannot reach the server. Check your connection.");
   }
 };
 
-// --- Debt form --------------------------------------------------------------
+// --- Credit form --------------------------------------------------------------
 
 // renderResults() -> the products matching the search box, e.g. "coke" -> 2 rows to tap
 const renderResults = () => {
@@ -286,7 +286,7 @@ const renderTotal = () => {
   document.getElementById("utang-total").textContent = allValid ? formatAmount(total) : "—";
 };
 
-// lineItem(line, index) -> one item of the debt with − / + buttons and its amount
+// lineItem(line, index) -> one item of the credit with − / + buttons and its amount
 const lineItem = (line, index) => {
   const li = makeElement("li", "list-group-item");
 
@@ -359,7 +359,7 @@ const lineItem = (line, index) => {
   return li;
 };
 
-// renderLines() -> the items of the debt being made, or an empty-state row
+// renderLines() -> the items of the credit being made, or an empty-state row
 const renderLines = () => {
   linesList.replaceChildren(
     ...(lines.length
@@ -425,7 +425,7 @@ document.getElementById("utang-form").addEventListener("submit", async (event) =
     if (!response) return;
     const data = await response.json();
     if (!response.ok) {
-      showError("utang-error", data.error || "Could not save the debt.");
+      showError("utang-error", data.error || "Could not save the credit.");
       return;
     }
     modal.hide();
@@ -445,7 +445,7 @@ const paymentNote = document.getElementById("payment-note");
 const savePaymentButton = document.getElementById("save-payment-button");
 
 // Shows what will be left after this payment as you type.
-// Paying more than the debt counts as paid in full; the extra is the change.
+// Paying more than the credit counts as paid in full; the extra is the change.
 const renderRemaining = () => {
   const amount = parsePrice(paymentAmount.value);
   const remaining = document.getElementById("payment-remaining");
@@ -540,7 +540,7 @@ const voidReason = document.getElementById("void-reason");
 const confirmVoidButton = document.getElementById("confirm-void-button");
 let voidingId = null; // the transaction shown in the void popup
 
-// openVoidForm(transaction) -> the void popup for that debt or payment
+// openVoidForm(transaction) -> the void popup for that credit or payment
 const openVoidForm = (transaction) => {
   voidingId = transaction.id;
   const isUtang = transaction.type === "utang";
@@ -549,7 +549,7 @@ const openVoidForm = (transaction) => {
     makeElement(
       "div",
       `fw-semibold ${isUtang ? "text-danger" : "text-success"}`,
-      `${isUtang ? "Debt" : "Payment"} ${formatAmount(transaction.amount)}`
+      `${isUtang ? "Credit" : "Payment"} ${formatAmount(transaction.amount)}`
     ),
     makeElement("div", "", describeTransaction(transaction)),
     makeElement("div", "small text-body-secondary", transaction.date)
@@ -589,7 +589,7 @@ document.getElementById("void-form").addEventListener("submit", async (event) =>
 
 document.getElementById("add-utang-button").addEventListener("click", openUtangForm);
 document.getElementById("add-other-button").addEventListener("click", addOtherItem);
-// Enter in the "other item" fields adds the item instead of saving the whole debt.
+// Enter in the "other item" fields adds the item instead of saving the whole credit.
 for (const input of [otherName, otherPrice]) {
   input.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;

@@ -20,7 +20,7 @@ class CustomerService(Service):
         return self.customers.get_with_balance(customer_id) is not None
 
     def list(self, page=None, per_page=20, query=""):
-        """Customers with their balance, highest debt first (then A-Z).
+        """Customers with their balance, highest credit first (then A-Z).
 
         Without a page: all customers.
         With a page: one page of the customers whose name or phone has the query.
@@ -35,7 +35,7 @@ class CustomerService(Service):
         return {
             "customers": [customer_json(row) for row in rows],
             "page": page, "per_page": per_page, "pages": pages, "total": total,
-            # For the "10 total · 7 with debt" line (all customers, not just this search).
+            # For the "10 total · 7 with credit" line (all customers, not just this search).
             "all_count": self.customers.count(),
             "with_utang_count": self.customers.count_with_utang(),
         }

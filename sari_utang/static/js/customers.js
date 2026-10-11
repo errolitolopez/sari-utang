@@ -1,4 +1,4 @@
-// Customer list: highest debt first, one page at a time (search is done on the server),
+// Customer list: highest credit first, one page at a time (search is done on the server),
 // and adds new ones.
 
 const PER_PAGE = 20;
@@ -40,14 +40,14 @@ const customerItem = (customer) => {
     balance.textContent = formatAmount(customer.balance);
   } else {
     balance.className = "small text-body-secondary";
-    balance.textContent = "No debt";
+    balance.textContent = "No credit";
   }
 
   row.append(left, balance);
   return row;
 };
 
-// Highest debt first; the server does the sorting, searching and paging.
+// Highest credit first; the server does the sorting, searching and paging.
 const render = (data) => {
   if (data.all_count === 0) {
     list.replaceChildren(messageItem("No customers yet. Tap + Add to add one."));
@@ -60,7 +60,7 @@ const render = (data) => {
   document.getElementById("customer-summary").textContent =
     searchInput.value.trim() !== ""
       ? `${data.total} found`
-      : `${data.all_count} total · ${data.with_utang_count} with debt`;
+      : `${data.all_count} total · ${data.with_utang_count} with credit`;
 
   // ‹ Prev · Page 2 of 3 · Next ›
   page = data.page;

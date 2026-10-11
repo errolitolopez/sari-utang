@@ -1,6 +1,6 @@
 @echo off
 rem Reinstall Sari Utang: a fresh copy of the app and of its Python packages.
-rem KEPT:    the debt list and PIN (instance\), backups\, logs\,
+rem KEPT:    the credit list and PIN (instance\), backups\, logs\,
 rem          config\settings.json and config\units.json, Desktop icons and auto-start.
 rem REPLACED: the app's own files (reset to the newest version on GitHub)
 rem           and the Python packages (.venv, installed again).
@@ -15,7 +15,7 @@ title Sari Utang - Reinstall
 cd /d "%~2"
 
 echo This will reinstall Sari Utang.
-echo   Kept:     debt list, PIN, backups, store name, units, Desktop icons.
+echo   Kept:     credit list, PIN, backups, store name, units, Desktop icons.
 echo   Replaced: the app's files (newest version from GitHub) and its Python packages.
 echo.
 choice /c YN /m "Continue"

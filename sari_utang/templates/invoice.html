@@ -37,15 +37,15 @@
             <div class="text-body-secondary">{{ today }}</div>
           </div>
           <div class="d-flex justify-content-between align-items-baseline invoice-rule pb-1 mb-1">
-            <div>Debt of <span class="fw-semibold">{{ customer.name }}</span></div>
+            <div>Credit of <span class="fw-semibold">{{ customer.name }}</span></div>
             {% if customer.phone %}<div class="text-body-secondary">{{ customer.phone }}</div>{% endif %}
           </div>
 
           {% if not invoice.entries %}
-          <div class="py-2">No debt. All paid. 🎉</div>
+          <div class="py-2">No credit. All paid. 🎉</div>
           {% else %}
 
-          <!-- Unpaid debt, oldest first. One line per item. -->
+          <!-- Unpaid credit, oldest first. One line per item. -->
           <table class="invoice-table">
             <tbody>
               {% for entry in invoice.entries %}
@@ -70,7 +70,7 @@
               </tr>
               {% endif %}
               {% if entry.paid %}
-              <!-- Part of this debt was already paid (payments pay the oldest debt first) -->
+              <!-- Part of this credit was already paid (payments pay the oldest credit first) -->
               <tr class="invoice-subtotal">
                 <td class="text-end text-body-secondary">Already paid (partial)</td>
                 <td class="text-end">−{{ entry.paid|peso }}</td>
@@ -105,7 +105,7 @@
           <table class="invoice-table invoice-totals">
             <tbody>
               <tr>
-                <td>Total debt</td>
+                <td>Total credit</td>
                 <td class="text-end">{{ invoice.total_utang|peso }}</td>
               </tr>
               {% if invoice.partly_paid %}

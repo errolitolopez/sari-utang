@@ -1,4 +1,4 @@
-"""Sample data for trying out the app: common sari-sari products, customers, debt and payments.
+"""Sample data for trying out the app: common sari-sari products, customers, credit and payments.
 
 Run with: flask --app app seed
           flask --app app seed --products-only
@@ -78,13 +78,13 @@ PRODUCTS = [
 
 # Sample customers and their history. Each entry: (days ago, kind, details)
 #   ("utang", [(product name, unit, quantity), ...], note)
-#   ("payment", cash received in pesos, note)    -> more than the debt gives change
+#   ("payment", cash received in pesos, note)    -> more than the credit gives change
 #   ("void", reason)                              -> voids the entry just before it
 CUSTOMERS = [
     ("Aling Nena", "0917 123 4567", [
         (70, "utang", [("Dinorado Rice", "kg", 2), ("Egg", "pc", 6)], None),
         (45, "utang", [("Lucky Me Pancit Canton", "pack", 4), ("Coke Mismo", "bottle", 2)], "snack"),
-        (30, "payment", 174, None),  # pays off the oldest debt; the 45-day one is still unpaid
+        (30, "payment", 174, None),  # pays off the oldest credit; the 45-day one is still unpaid
         (10, "utang", [("Cooking Oil", "pack", 1), ("Silver Swan Soy Sauce", "sachet", 2)], None),
     ]),
     ("Mang Tonyo", "0918 555 0101", [
@@ -112,7 +112,7 @@ CUSTOMERS = [
         (60, "utang", [("Century Tuna Flakes", "can", 3), ("Dinorado Rice", "kg", 1)], None),
         (15, "payment", 174, "paid in full"),  # paid in full, not in Collections
     ]),
-    ("Dodong", None, []),  # no debt yet
+    ("Dodong", None, []),  # no credit yet
 ]
 
 
@@ -217,7 +217,7 @@ def add_customers(db):
 @click.option("--products-only", is_flag=True, help="Only add the sample products.")
 @with_appcontext
 def seed_command(products_only):
-    """Add sample products, customers, debt and payments for trying out the app."""
+    """Add sample products, customers, credit and payments for trying out the app."""
     backup = backup_database()
     if backup:
         click.echo(f"Backup saved: {backup}")

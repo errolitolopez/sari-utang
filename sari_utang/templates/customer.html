@@ -23,7 +23,7 @@
         <div id="customer-phone" class="text-body-secondary small"></div>
       </div>
       <div class="text-end">
-        <div class="small text-body-secondary">Debt</div>
+        <div class="small text-body-secondary">Credit</div>
         <div id="customer-balance" class="fs-3 fw-bold">—</div>
       </div>
     </div>
@@ -31,7 +31,7 @@
 
   <div class="row g-2 mb-3">
     <div class="col-6">
-      <button id="add-utang-button" class="btn btn-danger btn-lg w-100 bi bi-plus-lg">Debt</button>
+      <button id="add-utang-button" class="btn btn-danger btn-lg w-100 bi bi-plus-lg">Credit</button>
     </div>
     <div class="col-6">
       <button id="add-payment-button" class="btn btn-success btn-lg w-100 bi bi-cash" disabled>Payment</button>
@@ -47,12 +47,12 @@
   </div>
 </main>
 
-<!-- Add debt form: full screen on phones -->
+<!-- Add credit form: full screen on phones -->
 <div class="modal fade" id="utang-modal" tabindex="-1" aria-labelledby="utang-modal-title" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
     <form id="utang-form" class="modal-content" novalidate>
       <div class="modal-header">
-        <h2 class="modal-title fs-5" id="utang-modal-title">Debt</h2>
+        <h2 class="modal-title fs-5" id="utang-modal-title">Credit</h2>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
@@ -82,7 +82,7 @@
           </div>
         </details>
 
-        <!-- Items in this debt -->
+        <!-- Items in this credit -->
         <div class="fw-semibold mb-1">Items</div>
         <ul id="utang-lines" class="list-group mb-3"></ul>
 
@@ -97,7 +97,7 @@
           <div class="small text-body-secondary">Total</div>
           <div id="utang-total" class="fs-4 fw-bold">₱0.00</div>
         </div>
-        <button id="save-utang-button" type="submit" class="btn btn-danger btn-lg bi bi-check-lg">Save debt</button>
+        <button id="save-utang-button" type="submit" class="btn btn-danger btn-lg bi bi-check-lg">Save credit</button>
       </div>
     </form>
   </div>
@@ -113,7 +113,7 @@
       </div>
       <div class="modal-body">
         <div class="d-flex justify-content-between mb-3">
-          <span class="text-body-secondary">Debt</span>
+          <span class="text-body-secondary">Credit</span>
           <span id="payment-owed" class="fw-semibold text-danger"></span>
         </div>
 

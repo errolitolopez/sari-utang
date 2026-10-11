@@ -62,7 +62,7 @@ class InvoicePDF(FPDF):
 def invoice_pdf_bytes(store_name, customer, invoice, today):
     """The invoice as PDF bytes. invoice is what app.invoice_data() returns."""
     pdf = InvoicePDF()
-    pdf.set_title(f"Debt of {customer['name']}")
+    pdf.set_title(f"Credit of {customer['name']}")
     pdf.add_page()
 
     # Header: store name and date, customer and phone
@@ -71,7 +71,7 @@ def invoice_pdf_bytes(store_name, customer, invoice, today):
     pdf.text_style(8, grey=True)
     pdf.cell(pdf.epw / 2, 5, today, align="R", new_x="LMARGIN", new_y="NEXT")
     pdf.text_style(8)
-    pdf.cell(pdf.epw / 2, LINE, f"Debt of {customer['name']}")
+    pdf.cell(pdf.epw / 2, LINE, f"Credit of {customer['name']}")
     pdf.text_style(8, grey=True)
     pdf.cell(pdf.epw / 2, LINE, customer["phone"] or "", align="R", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(0.8)
@@ -79,10 +79,10 @@ def invoice_pdf_bytes(store_name, customer, invoice, today):
 
     if not invoice["entries"]:
         pdf.text_style(8)
-        pdf.cell(0, 6, "No debt. All paid.", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, "No credit. All paid.", new_x="LMARGIN", new_y="NEXT")
         return bytes(pdf.output())
 
-    # Unpaid debt, oldest first, one line per item
+    # Unpaid credit, oldest first, one line per item
     for entry in invoice["entries"]:
         pdf.ln(0.8)
         pdf.text_style(7, bold=True, grey=True)
@@ -101,7 +101,7 @@ def invoice_pdf_bytes(store_name, customer, invoice, today):
     # Totals
     pdf.ln(1)
     pdf.dashed_line()
-    pdf.row("Total debt", peso(invoice["total_utang"]))
+    pdf.row("Total credit", peso(invoice["total_utang"]))
     if invoice["partly_paid"]:
         pdf.row("Already paid (partial)", f"−{peso(invoice['partly_paid'])}")
     pdf.row("Balance", peso(invoice["balance"]), size=10, bold=True)

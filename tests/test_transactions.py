@@ -1,4 +1,4 @@
-"""Add debt, add payment, void, and the customer history."""
+"""Add credit, add payment, void, and the customer history."""
 
 import pytest
 
@@ -89,7 +89,7 @@ def test_payment_rules(client, customer, coke):
         return client.post("/api/transactions", json={"type": "payment", "customer_id": customer["id"],
                                                       "amount": amount})
 
-    assert error(pay(100)) == f"{customer['name']} has no debt to pay."
+    assert error(pay(100)) == f"{customer['name']} has no credit to pay."
     add_utang(client, customer["id"], [{"product_id": coke["id"], "quantity": 1}])
     assert error(pay(0)) == "Amount must be more than P0."
     assert error(pay(True)) == "Amount must be more than P0."
@@ -97,16 +97,16 @@ def test_payment_rules(client, customer, coke):
 
 
 def test_void_utang_and_payment(client, customer, coke):
-    debt = add_utang(client, customer["id"], [{"product_id": coke["id"], "quantity": 5}])
+    credit = add_utang(client, customer["id"], [{"product_id": coke["id"], "quantity": 5}])
     payment = add_payment(client, customer["id"], 3000)["transaction"]
 
-    blocked = client.post(f"/api/transactions/{debt['id']}/void", json={})
+    blocked = client.post(f"/api/transactions/{credit['id']}/void", json={})
     assert blocked.status_code == 400
-    assert error(blocked).startswith("Part of this debt was already paid.")
+    assert error(blocked).startswith("Part of this credit was already paid.")
 
     response = client.post(f"/api/transactions/{payment['id']}/void", json={"reason": " nagkamali "})
     assert response.get_json() == {"ok": True, "balance": 10000}
-    response = client.post(f"/api/transactions/{debt['id']}/void", json={})
+    response = client.post(f"/api/transactions/{credit['id']}/void", json={})
     assert response.get_json()["balance"] == 0
 
     history = client.get(f"/api/customers/{customer['id']}/transactions").get_json()["transactions"]
@@ -116,9 +116,9 @@ def test_void_utang_and_payment(client, customer, coke):
 
 def test_void_errors(client, customer, coke):
     assert client.post("/api/transactions/999/void", json={}).status_code == 404
-    debt = add_utang(client, customer["id"], [{"product_id": coke["id"], "quantity": 1}])
-    assert client.post(f"/api/transactions/{debt['id']}/void", json={}).status_code == 200
-    assert error(client.post(f"/api/transactions/{debt['id']}/void", json={})) == "This is already voided."
+    credit = add_utang(client, customer["id"], [{"product_id": coke["id"], "quantity": 1}])
+    assert client.post(f"/api/transactions/{credit['id']}/void", json={}).status_code == 200
+    assert error(client.post(f"/api/transactions/{credit['id']}/void", json={})) == "This is already voided."
 
 
 def test_history_of_missing_customer(client):

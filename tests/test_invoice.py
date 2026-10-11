@@ -31,7 +31,7 @@ def test_invoice_page_lists_only_unpaid_utang(client):
 def test_invoice_page_when_all_paid(client):
     customer = add_customer(client)
     html = client.get(f"/customers/{customer['id']}/invoice").get_data(as_text=True)
-    assert "No debt. All paid." in html
+    assert "No credit. All paid." in html
 
 
 def test_invoice_sms_link_needs_a_phone(client):

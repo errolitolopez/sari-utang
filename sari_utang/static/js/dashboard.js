@@ -41,7 +41,7 @@ const render = (data) => {
   top.replaceChildren(
     ...(data.top_balances.length
       ? data.top_balances.map((c) => listItem(c.id, c.name, "", formatAmount(c.balance), "text-danger"))
-      : [messageItem("No debt. 🎉")])
+      : [messageItem("No credit. 🎉")])
   );
 
   const recent = document.getElementById("recent-transactions");
