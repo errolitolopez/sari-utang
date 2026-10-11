@@ -1,4 +1,4 @@
-"""sari-utang: pautang list for a sari-sari store.
+"""sari-utang: credit (debt) list for a small neighborhood store.
 
 Layers (each only uses the ones below it):
   web/           Flask blueprints: pages and JSON API, login check

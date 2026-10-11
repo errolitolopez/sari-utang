@@ -71,7 +71,7 @@ const renderCustomer = (customer) => {
 // What an entry is about: "2 bottle Coke Mismo, 0.5 kg Rice" or "Payment".
 const describeTransaction = (transaction) => {
   if (transaction.items.length) return transaction.items.map(describeItem).join(", ");
-  return transaction.type === "utang" ? "Utang" : "Bayad";
+  return transaction.type === "utang" ? "Debt" : "Payment";
 };
 
 // One line per entry in the history. Tap it to see the details.
@@ -135,7 +135,7 @@ const openDetails = (transaction) => {
   const isUtang = transaction.type === "utang";
   const isVoided = transaction.voided_at !== null;
 
-  document.getElementById("details-title").textContent = isUtang ? "Utang" : "Bayad";
+  document.getElementById("details-title").textContent = isUtang ? "Debt" : "Payment";
   document.getElementById("details-date").textContent = transaction.date;
 
   const voided = document.getElementById("details-voided");
@@ -465,7 +465,7 @@ const renderRemaining = () => {
   document.getElementById("payment-change").textContent = change > 0 ? formatAmount(change) : "";
 };
 
-// showMessage("Bayad ₱50.00 saved.") -> the green note at the top of the page
+// showMessage("Payment ₱50.00 saved.") -> the green note at the top of the page
 const showMessage = (message) => {
   document.getElementById("customer-message-text").textContent = message;
   document.getElementById("customer-message").classList.remove("d-none");
@@ -519,7 +519,7 @@ document.getElementById("payment-form").addEventListener("submit", async (event)
     showMessage(
       data.change > 0
         ? `Paid in full ${formatAmount(data.transaction.amount)} · Change ${formatAmount(data.change)}`
-        : `Bayad ${formatAmount(data.transaction.amount)} saved.`
+        : `Payment ${formatAmount(data.transaction.amount)} saved.`
     );
     await loadCustomer();
   } catch {
@@ -549,7 +549,7 @@ const openVoidForm = (transaction) => {
     makeElement(
       "div",
       `fw-semibold ${isUtang ? "text-danger" : "text-success"}`,
-      `${isUtang ? "Utang" : "Bayad"} ${formatAmount(transaction.amount)}`
+      `${isUtang ? "Debt" : "Payment"} ${formatAmount(transaction.amount)}`
     ),
     makeElement("div", "", describeTransaction(transaction)),
     makeElement("div", "small text-body-secondary", transaction.date)

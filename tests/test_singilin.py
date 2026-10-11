@@ -1,4 +1,4 @@
-"""Singilin list (who to collect from) and the dashboard summary."""
+"""Collections list (who to collect from) and the dashboard summary."""
 
 from datetime import date, timedelta
 
